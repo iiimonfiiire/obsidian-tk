@@ -388,6 +388,96 @@ describe("responses", () => {
   });
 });
 
+describe("statuses", () => {
+  const one = (text: string) => findTKs(text)[0];
+
+  it("derives open and responded", () => {
+    expect(one("[TK: q]").status).toBe("open");
+    expect(one("[TK]").status).toBe("open");
+    expect(one("[TK: q >> ]").status).toBe("open");
+    expect(one("[TK: q >> a]").status).toBe("responded");
+  });
+
+  it("reads accepted and rejected, with or without a response", () => {
+    expect(one("[TK accepted: q]")).toMatchObject({
+      status: "accepted",
+      body: "q",
+      response: null,
+    });
+    expect(one("[TK accepted: q >> a]")).toMatchObject({
+      status: "accepted",
+      body: "q",
+      response: "a",
+    });
+    expect(one("[TK rejected: q]").status).toBe("rejected");
+    expect(one("[TK rejected: q >> a]")).toMatchObject({
+      status: "rejected",
+      response: "a",
+    });
+  });
+
+  it("gives offsets past the longer prefix", () => {
+    const text = "x [TK accepted: q >> the answer] y";
+    const tk = one(text);
+    expect(text.slice(tk.responseStart ?? 0, tk.responseEnd ?? 0)).toBe(
+      "the answer",
+    );
+    expect(text.slice(tk.start, tk.start + tk.prefixLength)).toBe(
+      "[TK accepted:",
+    );
+  });
+
+  it.each([
+    "[TK done: x]",
+    "[TK Accepted: x]",
+    "[TK ACCEPTED: x]",
+    "[TK accepted x]",
+    "[TK  accepted: x]",
+    "[TK accepted : x]",
+    "[TK\taccepted: x]",
+    "[TKaccepted: x]",
+    "[TK accepted]",
+    "[TK rejected]",
+    "[tk accepted: x]",
+    "[TK accepteds: x]",
+  ])("leaves %s as plain text", (text) => {
+    expect(findTKs(text)).toEqual([]);
+  });
+
+  it("applies the other rules equally", () => {
+    expect(one("[TK accepted: see [[A|b]] now >> [[C|d]]]")).toMatchObject({
+      body: "see [[A|b]] now",
+      response: "[[C|d]]",
+    });
+    expect(findTKs("`[TK accepted: x]`")).toEqual([]);
+    expect(findTKs("```\n[TK rejected: x]\n```")).toEqual([]);
+    expect(findTKs("\\[TK accepted: x]")).toEqual([]);
+    expect(findTKs("[[TK accepted: x]]")).toEqual([]);
+    expect(findTKs("[TK accepted: x](https://example.com)")).toEqual([]);
+    expect(findTKs("[TK accepted: open")).toEqual([]);
+    expect(one("[TK accepted: x]()")).toMatchObject({
+      status: "accepted",
+      raw: "[TK accepted: x]",
+    });
+    expect(one("---\na: \"[TK rejected: x]\"\n---\n")).toMatchObject({
+      status: "rejected",
+      inFrontmatter: true,
+    });
+  });
+
+  it("flags an escaped closed TK like any other", () => {
+    expect(tkVisibility("\\[TK accepted: a] [TK rejected: b]")).toEqual([
+      false,
+      true,
+    ]);
+  });
+
+  it("leaves existing forms unchanged", () => {
+    expect(one("[TK: a]")).toMatchObject({ prefixLength: 4, body: "a" });
+    expect(one("[TK]")).toMatchObject({ prefixLength: 3, bare: true });
+  });
+});
+
 describe("tkVisibility", () => {
   it("flags escaped forms false and real forms true, in source order", () => {
     expect(tkVisibility("\\[TK: a] [TK: b] \\[TK] [TK]")).toEqual([

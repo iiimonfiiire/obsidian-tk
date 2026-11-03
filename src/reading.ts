@@ -1,4 +1,9 @@
-import { RESPONSE_SEPARATOR, tkOpeningAt, type TKOpening } from "./parser";
+import {
+  RESPONSE_SEPARATOR,
+  openingLength,
+  tkOpeningAt,
+  type TKOpening,
+} from "./parser";
 
 const BREAKING_TAGS = new Set([
   "ADDRESS",
@@ -101,6 +106,12 @@ function piece(doc: Document, className: string, text: string): HTMLElement {
   return span;
 }
 
+function chipClass(opening: TKOpening): string {
+  return opening === "accepted" || opening === "rejected"
+    ? `tk-chip tk-${opening}`
+    : "tk-chip";
+}
+
 function wrap(start: Text, index: number, close: Close, opening: TKOpening): HTMLElement {
   const doc = start.ownerDocument;
   const closing = close.node.splitText(close.offset);
@@ -108,7 +119,7 @@ function wrap(start: Text, index: number, close: Close, opening: TKOpening): HTM
   const first = index > 0 ? start.splitText(index) : start;
 
   const chip = doc.createElement("span");
-  chip.className = "tk-chip";
+  chip.className = chipClass(opening);
   first.parentNode?.insertBefore(chip, first);
   let node: ChildNode | null = first;
   while (node) {
@@ -119,7 +130,7 @@ function wrap(start: Text, index: number, close: Close, opening: TKOpening): HTM
   }
 
   const label = first.splitText(1);
-  const rest = label.splitText(opening === "bare" ? 2 : 3);
+  const rest = label.splitText(openingLength(opening) - 1);
   chip.replaceChild(piece(doc, "tk-bracket", "["), first);
   chip.replaceChild(piece(doc, "tk-label", label.data), label);
   chip.replaceChild(piece(doc, "tk-bracket", "]"), closing);
@@ -179,8 +190,8 @@ function scanText(start: Text, walk: Walk): ChildNode | null {
     const close: Close | null =
       opening === "bare"
         ? { node, offset: index + 3 }
-        : opening === "body"
-          ? findClose(node, index + 4)
+        : opening
+          ? findClose(node, index + openingLength(opening))
           : null;
     if (!opening || !close) {
       position = index + 3;
@@ -208,6 +219,8 @@ function emptyLinkOpening(link: Element): TKOpening | null {
   const first = link.firstChild;
   if (!first || !isText(first)) return null;
   if (first.data.startsWith("TK:")) return "body";
+  if (first.data.startsWith("TK accepted:")) return "accepted";
+  if (first.data.startsWith("TK rejected:")) return "rejected";
   return link.textContent === "TK" ? "bare" : null;
 }
 
@@ -218,9 +231,9 @@ function replaceEmptyLink(
 ): HTMLElement {
   const doc = link.ownerDocument;
   const chip = doc.createElement("span");
-  chip.className = "tk-chip";
+  chip.className = chipClass(opening);
   const first = link.firstChild as Text;
-  const rest = first.splitText(opening === "bare" ? 2 : 3);
+  const rest = first.splitText(openingLength(opening) - 1);
 
   chip.appendChild(piece(doc, "tk-bracket", "["));
   chip.appendChild(piece(doc, "tk-label", first.data));

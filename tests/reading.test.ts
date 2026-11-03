@@ -79,6 +79,41 @@ describe("responses", () => {
   });
 });
 
+describe("statuses", () => {
+  it("styles accepted and rejected, with the full label", () => {
+    const root = render(
+      "<p>[TK accepted: a >> b] [TK rejected: c] [TK: d]</p>",
+    );
+    const all = Array.from(root.querySelectorAll(".tk-chip"));
+    expect(all.map((c) => c.className)).toEqual([
+      "tk-chip tk-accepted",
+      "tk-chip tk-rejected",
+      "tk-chip",
+    ]);
+    expect(all[0].querySelector(".tk-label")?.textContent).toBe("TK accepted:");
+    expect(all[0].querySelector(".tk-response")?.textContent).toBe(" b]");
+    expect(root.textContent).toBe("[TK accepted: a >> b] [TK rejected: c] [TK: d]");
+  });
+
+  it("wraps links in a closed TK", () => {
+    const root = render('<p>[TK accepted: see <a href="x">x</a> >> ok]</p>');
+    expect(chips(root)).toEqual(["[TK accepted: see x >> ok]"]);
+    expect(root.querySelector(".tk-accepted a")).not.toBeNull();
+  });
+
+  it("handles a closed link with no destination", () => {
+    const root = render('<p><a href="">TK rejected: q</a></p>');
+    expect(chips(root)).toEqual(["[TK rejected: q]"]);
+    expect(root.querySelector(".tk-rejected")).not.toBeNull();
+  });
+
+  it("leaves lookalikes alone", () => {
+    expect(
+      chips(render("<p>[TK done: x] [TK Accepted: x] [TK accepted x]</p>")),
+    ).toEqual([]);
+  });
+});
+
 describe("decorateTKs", () => {
   it("wraps a bare TK and keeps surrounding text", () => {
     const root = render("<p>Before [TK] after</p>");

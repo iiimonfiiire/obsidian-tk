@@ -29,6 +29,14 @@ const COLOR_ROWS: { key: keyof ChipColors; name: string }[] = [
   { key: "commentText", name: "Comment text" },
   { key: "responseFill", name: "Response fill" },
   { key: "responseText", name: "Response text" },
+  { key: "acceptedFill", name: "Accepted fill" },
+  { key: "acceptedText", name: "Accepted text" },
+  { key: "acceptedResponseFill", name: "Accepted response fill" },
+  { key: "acceptedResponseText", name: "Accepted response text" },
+  { key: "rejectedFill", name: "Rejected fill" },
+  { key: "rejectedText", name: "Rejected text" },
+  { key: "rejectedResponseFill", name: "Rejected response fill" },
+  { key: "rejectedResponseText", name: "Rejected response text" },
 ];
 
 const SHIFT_HINT =

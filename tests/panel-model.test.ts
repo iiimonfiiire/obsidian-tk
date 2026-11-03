@@ -3,9 +3,13 @@ import {
   countTKs,
   filterFiles,
   isGroupCollapsed,
-  noteCountLabel,
   noteName,
-  vaultCountLabel,
+  countsByFilter,
+  emptyState,
+  filterByStatus,
+  headerLabel,
+  isStatusFilter,
+  matchesFilter,
 } from "../src/panel-model";
 import { findTKs } from "../src/parser";
 import type { FileTKs } from "../src/tk-index";
@@ -90,10 +94,6 @@ describe("searching responses", () => {
     ]);
   });
 
-  it("counts a TK with a response as open", () => {
-    expect(countTKs(files)).toBe(3);
-    expect(vaultCountLabel(files, files, "")).toBe("3 open in 2 notes");
-  });
 });
 
 describe("isGroupCollapsed", () => {
@@ -114,24 +114,109 @@ describe("isGroupCollapsed", () => {
   });
 });
 
-describe("count labels", () => {
-  it("describes the whole vault with no search", () => {
-    expect(vaultCountLabel(FILES, FILES, "")).toBe("5 open in 3 notes");
-    expect(vaultCountLabel(FILES.slice(2), FILES.slice(2), "")).toBe(
-      "1 open in 1 note",
+describe("status filters", () => {
+  const files = [
+    file(
+      "One.md",
+      "[TK: open one] [TK: asked >> answered] [TK accepted: ok] [TK rejected: no >> why]",
+    ),
+    file("Two.md", "[TK] [TK accepted: done >> yes]"),
+    file("Three.md", "[TK rejected: only closed]"),
+  ];
+  const bodies = (result: FileTKs[]) =>
+    result.flatMap((f) => f.tks.map((tk) => tk.body));
+
+  it("queue is open plus responded, in order", () => {
+    expect(bodies(filterByStatus(files, "queue"))).toEqual([
+      "open one",
+      "asked",
+      "",
+    ]);
+  });
+
+  it("each status filter keeps only its own", () => {
+    expect(bodies(filterByStatus(files, "open"))).toEqual(["open one", ""]);
+    expect(bodies(filterByStatus(files, "responded"))).toEqual(["asked"]);
+    expect(bodies(filterByStatus(files, "accepted"))).toEqual(["ok", "done"]);
+    expect(bodies(filterByStatus(files, "rejected"))).toEqual([
+      "no",
+      "only closed",
+    ]);
+  });
+
+  it("all keeps everything", () => {
+    expect(filterByStatus(files, "all")).toBe(files);
+  });
+
+  it("drops notes with nothing left", () => {
+    expect(filterByStatus(files, "queue").map((f) => f.path)).toEqual([
+      "One.md",
+      "Two.md",
+    ]);
+  });
+
+  it("counts per filter", () => {
+    expect(countsByFilter(files)).toEqual({
+      queue: 3,
+      open: 2,
+      responded: 1,
+      accepted: 2,
+      rejected: 2,
+      all: 7,
+    });
+  });
+
+  it("combines with search", () => {
+    const searched = filterFiles(files, "why");
+    expect(bodies(filterByStatus(searched, "queue"))).toEqual([]);
+    expect(bodies(filterByStatus(searched, "rejected"))).toEqual(["no"]);
+  });
+
+  it("validates stored values", () => {
+    expect(isStatusFilter("queue")).toBe(true);
+    expect(isStatusFilter("resolved")).toBe(false);
+    expect(isStatusFilter(undefined)).toBe(false);
+  });
+
+  it("matches a single TK", () => {
+    const [tk] = findTKs("[TK accepted: x]");
+    expect(matchesFilter(tk, "queue")).toBe(false);
+    expect(matchesFilter(tk, "all")).toBe(true);
+  });
+
+  it("the header shows the queue count, whatever is shown", () => {
+    const queue = filterByStatus(files, "queue");
+    expect(headerLabel(files, queue, "queue", "")).toBe("3 in queue");
+    expect(headerLabel(files, filterByStatus(files, "accepted"), "accepted", "")).toBe(
+      "3 in queue · showing 2",
     );
-    expect(vaultCountLabel([], [], "")).toBe("");
+    expect(headerLabel(files, [], "queue", "zzz")).toBe("3 in queue · showing 0");
+    expect(headerLabel([], [], "queue", "")).toBe("0 in queue");
+  });
+});
+
+describe("emptyState", () => {
+  it("celebrates an empty queue, plainly", () => {
+    expect(emptyState("queue", "vault", "")).toEqual({
+      title: "Queue clear.",
+      detail: "Nothing waiting in the vault.",
+    });
+    expect(emptyState("queue", "note", "").detail).toBe(
+      "Nothing waiting in this note.",
+    );
   });
 
-  it("describes the filtered subset while searching", () => {
-    const shown = filterFiles(FILES, "rent");
-    expect(vaultCountLabel(FILES, shown, "rent")).toBe("1 of 5 in 1 of 3 notes");
-    expect(vaultCountLabel(FILES, [], "zzz")).toBe("0 of 5 in 0 of 3 notes");
-  });
-
-  it("describes a single note", () => {
-    expect(noteCountLabel(4, 4, "")).toBe("4 open");
-    expect(noteCountLabel(4, 1, "x")).toBe("1 of 4 open");
-    expect(noteCountLabel(0, 0, "x")).toBe("0 open");
+  it("names the filter and the search", () => {
+    expect(emptyState("accepted", "note", "").title).toBe(
+      "No accepted TKs in this note.",
+    );
+    expect(emptyState("all", "vault", "").title).toBe("No TKs in the vault.");
+    expect(emptyState("queue", "vault", " q ").title).toBe(
+      'Nothing in the queue matches "q".',
+    );
+    expect(emptyState("rejected", "vault", "q").title).toBe(
+      'No rejected TKs match "q".',
+    );
+    expect(emptyState("all", "vault", "q").title).toBe('No TKs match "q".');
   });
 });

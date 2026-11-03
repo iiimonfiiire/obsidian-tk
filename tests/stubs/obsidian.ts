@@ -33,6 +33,7 @@ export class ItemView {
 
 export const Keymap = {};
 export class MarkdownView {}
+export class Notice {}
 export const Platform = {};
 export class SearchComponent {}
 export class TFile {}

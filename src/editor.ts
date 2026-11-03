@@ -21,6 +21,12 @@ export const CHIP_CLASS = "tk-cm";
 export const SOURCE_CLASS = "tk-source";
 export const RESPONSE_CLASS = "tk-response";
 
+function withStatus(className: string, tk: TK): string {
+  return tk.status === "accepted" || tk.status === "rejected"
+    ? `${className} tk-${tk.status}`
+    : className;
+}
+
 const HIDDEN = "hidden";
 const WIKILINK = /(!?)\[\[([^[\]|]+\|)?[^[\]]*\]\]/g;
 
@@ -61,9 +67,17 @@ export function outerRanges(
     if (tk.inFrontmatter) continue;
     if (tk.end < viewport.from || tk.start > viewport.to) continue;
     if (!livePreview) {
-      ranges.push({ from: tk.start, to: tk.end, className: SOURCE_CLASS });
+      ranges.push({
+        from: tk.start,
+        to: tk.end,
+        className: withStatus(SOURCE_CLASS, tk),
+      });
     } else if (!touches(tk, selection)) {
-      ranges.push({ from: tk.start, to: tk.end, className: CHIP_CLASS });
+      ranges.push({
+        from: tk.start,
+        to: tk.end,
+        className: withStatus(CHIP_CLASS, tk),
+      });
       // Runs to the closing bracket so the segment takes the pill's right end.
       if (tk.response !== null && tk.separator !== null) {
         ranges.push({
@@ -96,7 +110,7 @@ export function innerRanges(
     });
     ranges.push({
       from: tk.start + 1,
-      to: tk.start + (tk.bare ? 3 : 4),
+      to: tk.start + tk.prefixLength,
       className: "tk-label",
     });
     ranges.push({ from: tk.end - 1, to: tk.end, className: "tk-bracket" });
