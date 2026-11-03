@@ -1,0 +1,9 @@
+{
+  "id": "tk-comments",
+  "name": "TK Comments",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Mark gaps to fill later with [TK: ...], see them as chips, and track every open one in a side panel.",
+  "author": "TK Comments contributors",
+  "isDesktopOnly": false
+}
