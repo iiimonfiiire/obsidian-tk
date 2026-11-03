@@ -3,6 +3,14 @@ export interface ChipColors {
   commentText: string;
   responseFill: string;
   responseText: string;
+  acceptedFill: string;
+  acceptedText: string;
+  acceptedResponseFill: string;
+  acceptedResponseText: string;
+  rejectedFill: string;
+  rejectedText: string;
+  rejectedResponseFill: string;
+  rejectedResponseText: string;
 }
 
 export interface Appearance {
@@ -27,37 +35,55 @@ export const DEFAULT_COLORS: { dark: ChipColors; light: ChipColors } = {
     commentText: "#ffffff",
     responseFill: "#7c2d12",
     responseText: "#ffffff",
+    acceptedFill: "#15803d",
+    acceptedText: "#ffffff",
+    acceptedResponseFill: "#14532d",
+    acceptedResponseText: "#ffffff",
+    rejectedFill: "#52525b",
+    rejectedText: "#ffffff",
+    rejectedResponseFill: "#3f3f46",
+    rejectedResponseText: "#ffffff",
   },
   light: {
     commentFill: "#f5b041",
     commentText: "#2a1700",
     responseFill: "#fcdca6",
     responseText: "#2a1700",
+    acceptedFill: "#6fcf97",
+    acceptedText: "#052e16",
+    acceptedResponseFill: "#c6efd5",
+    acceptedResponseText: "#052e16",
+    rejectedFill: "#c4c4cc",
+    rejectedText: "#27272a",
+    rejectedResponseFill: "#e4e4e7",
+    rejectedResponseText: "#27272a",
   },
 };
 
 export const FONT_WEIGHTS = ["300", "400", "500", "600", "700", "800"];
 
-const COLOR_KEYS: (keyof ChipColors)[] = [
-  "commentFill",
-  "commentText",
-  "responseFill",
-  "responseText",
-];
+const COLOR_KEYS = Object.keys(DEFAULT_COLORS.dark) as (keyof ChipColors)[];
 
 const COLOR_VARIABLES: Record<keyof ChipColors, string> = {
   commentFill: "--tk-chip-fill",
   commentText: "--tk-chip-text",
   responseFill: "--tk-chip-response-fill",
   responseText: "--tk-chip-response-text",
+  acceptedFill: "--tk-chip-accepted-fill",
+  acceptedText: "--tk-chip-accepted-text",
+  acceptedResponseFill: "--tk-chip-accepted-response-fill",
+  acceptedResponseText: "--tk-chip-accepted-response-text",
+  rejectedFill: "--tk-chip-rejected-fill",
+  rejectedText: "--tk-chip-rejected-text",
+  rejectedResponseFill: "--tk-chip-rejected-response-fill",
+  rejectedResponseText: "--tk-chip-rejected-response-text",
 };
 
-const emptyColors = (): ChipColors => ({
-  commentFill: "",
-  commentText: "",
-  responseFill: "",
-  responseText: "",
-});
+const emptyColors = (): ChipColors => {
+  const colors = {} as ChipColors;
+  for (const key of COLOR_KEYS) colors[key] = "";
+  return colors;
+};
 
 export const emptyAppearance = (): Appearance => ({
   dark: emptyColors(),

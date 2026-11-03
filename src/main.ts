@@ -87,6 +87,7 @@ export default class TKCommentsPlugin extends Plugin implements TKSettingsHost {
     this.addCommand({
       id: "insert-tk",
       name: "Insert TK",
+      icon: TK_ICON,
       editorCallback: (editor) => this.insertTK(editor),
     });
 

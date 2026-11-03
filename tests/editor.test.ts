@@ -105,6 +105,24 @@ describe("ranges", () => {
     ]);
   });
 
+  it("adds a status class and covers the whole label", () => {
+    const text = "\n[TK accepted: q >> a] [TK rejected: z]";
+    const tks = findTKs(text);
+    expect(outerRanges(tks, away, true, FULL).map((r) => r.className)).toEqual([
+      "tk-cm tk-accepted",
+      "tk-response",
+      "tk-cm tk-rejected",
+    ]);
+    const labels = innerRanges(tks, away, true, FULL).filter(
+      (r) => r.className === "tk-label",
+    );
+    expect(texts(text, labels)).toEqual(["TK accepted:", "TK rejected:"]);
+    expect(outerRanges(tks, away, false, FULL).map((r) => r.className)).toEqual([
+      "tk-source tk-accepted",
+      "tk-source tk-rejected",
+    ]);
+  });
+
   it("marks the separator, in the comment-only form too", () => {
     for (const text of ["\n[TK: q >> a]", "\n[TK: q >> ]"]) {
       const marks = innerRanges(findTKs(text), away, true, FULL).filter(

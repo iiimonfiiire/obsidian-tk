@@ -148,6 +148,19 @@ describe("appearanceCss", () => {
   });
 });
 
+describe("status colors", () => {
+  it("are per theme and fill in when missing", () => {
+    const { appearance } = normalizeSettings({
+      appearance: { dark: { acceptedFill: "#112233" } },
+    });
+    expect(appearance.dark.acceptedFill).toBe("#112233");
+    expect(appearance.dark.rejectedFill).toBe("");
+    expect(appearanceCss(appearance)).toBe(
+      "body.theme-dark { --tk-chip-accepted-fill: #112233; }",
+    );
+  });
+});
+
 describe("DEFAULT_COLORS", () => {
   const css = readFileSync("styles.css", "utf8");
   const block = (selector: string) => {
@@ -155,24 +168,27 @@ describe("DEFAULT_COLORS", () => {
     return css.slice(start, css.indexOf("}", start));
   };
 
+  const VARIABLES: Record<keyof typeof DEFAULT_COLORS.dark, string> = {
+    commentFill: "--tk-chip-fill",
+    commentText: "--tk-chip-text",
+    responseFill: "--tk-chip-response-fill",
+    responseText: "--tk-chip-response-text",
+    acceptedFill: "--tk-chip-accepted-fill",
+    acceptedText: "--tk-chip-accepted-text",
+    acceptedResponseFill: "--tk-chip-accepted-response-fill",
+    acceptedResponseText: "--tk-chip-accepted-response-text",
+    rejectedFill: "--tk-chip-rejected-fill",
+    rejectedText: "--tk-chip-rejected-text",
+    rejectedResponseFill: "--tk-chip-rejected-response-fill",
+    rejectedResponseText: "--tk-chip-rejected-response-text",
+  };
+
   it("matches styles.css", () => {
     const light = block("body");
     const dark = block(".theme-dark");
-    expect(light).toContain(`--tk-chip-fill: ${DEFAULT_COLORS.light.commentFill};`);
-    expect(light).toContain(`--tk-chip-text: ${DEFAULT_COLORS.light.commentText};`);
-    expect(light).toContain(
-      `--tk-chip-response-fill: ${DEFAULT_COLORS.light.responseFill};`,
-    );
-    expect(light).toContain(
-      `--tk-chip-response-text: ${DEFAULT_COLORS.light.responseText};`,
-    );
-    expect(dark).toContain(`--tk-chip-fill: ${DEFAULT_COLORS.dark.commentFill};`);
-    expect(dark).toContain(`--tk-chip-text: ${DEFAULT_COLORS.dark.commentText};`);
-    expect(dark).toContain(
-      `--tk-chip-response-fill: ${DEFAULT_COLORS.dark.responseFill};`,
-    );
-    expect(dark).toContain(
-      `--tk-chip-response-text: ${DEFAULT_COLORS.dark.responseText};`,
-    );
+    for (const key of Object.keys(VARIABLES) as (keyof typeof VARIABLES)[]) {
+      expect(light).toContain(`${VARIABLES[key]}: ${DEFAULT_COLORS.light[key]};`);
+      expect(dark).toContain(`${VARIABLES[key]}: ${DEFAULT_COLORS.dark[key]};`);
+    }
   });
 });

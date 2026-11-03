@@ -13,7 +13,17 @@ body {
   --tk-chip-padding-y: calc(var(--tag-padding-y, 0.25em) * 0.6);
   --tk-chip-bleed: 0.14em;
   --tk-chip-margin: 0.14em;
+  --tk-chip-accepted-fill: #6fcf97;
+  --tk-chip-accepted-text: #052e16;
+  --tk-chip-accepted-response-fill: #c6efd5;
+  --tk-chip-accepted-response-text: #052e16;
+  --tk-chip-rejected-fill: #c4c4cc;
+  --tk-chip-rejected-text: #27272a;
+  --tk-chip-rejected-response-fill: #e4e4e7;
+  --tk-chip-rejected-response-text: #27272a;
   --tk-chip-rgb: 245, 158, 11;
+  --tk-chip-accepted-rgb: 34, 160, 90;
+  --tk-chip-rejected-rgb: 130, 130, 140;
   --tk-source-background: rgba(var(--tk-chip-rgb), 0.16);
 }
 
@@ -22,7 +32,32 @@ body {
   --tk-chip-text: #ffffff;
   --tk-chip-response-fill: #7c2d12;
   --tk-chip-response-text: #ffffff;
+  --tk-chip-accepted-fill: #15803d;
+  --tk-chip-accepted-text: #ffffff;
+  --tk-chip-accepted-response-fill: #14532d;
+  --tk-chip-accepted-response-text: #ffffff;
+  --tk-chip-rejected-fill: #52525b;
+  --tk-chip-rejected-text: #ffffff;
+  --tk-chip-rejected-response-fill: #3f3f46;
+  --tk-chip-rejected-response-text: #ffffff;
   --tk-source-background: rgba(var(--tk-chip-rgb), 0.2);
+}
+
+/* A status swaps the palette. Everything below reads these same variables. */
+.tk-accepted {
+  --tk-chip-fill: var(--tk-chip-accepted-fill);
+  --tk-chip-text: var(--tk-chip-accepted-text);
+  --tk-chip-response-fill: var(--tk-chip-accepted-response-fill);
+  --tk-chip-response-text: var(--tk-chip-accepted-response-text);
+  --tk-source-background: rgba(var(--tk-chip-accepted-rgb), 0.2);
+}
+
+.tk-rejected {
+  --tk-chip-fill: var(--tk-chip-rejected-fill);
+  --tk-chip-text: var(--tk-chip-rejected-text);
+  --tk-chip-response-fill: var(--tk-chip-rejected-response-fill);
+  --tk-chip-response-text: var(--tk-chip-rejected-response-text);
+  --tk-source-background: rgba(var(--tk-chip-rejected-rgb), 0.2);
 }
 
 /*
@@ -194,13 +229,21 @@ body {
 
 .tk-status {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--size-4-2, 8px);
+  gap: var(--size-2-3, 6px) var(--size-4-2, 8px);
   min-height: 24px;
 }
 
+.tk-panel .tk-filter {
+  flex: none;
+  max-width: 100%;
+  font-size: var(--font-ui-smaller, 12px);
+}
+
 .tk-count {
+  flex: 1;
+  min-width: 0;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller, 12px);
 }
@@ -237,13 +280,88 @@ body {
 }
 
 .tk-row {
-  padding: var(--size-2-3, 6px);
-  border-left: 2px solid rgba(var(--tk-chip-rgb), 0.7);
-  border-radius: 0 var(--radius-s, 4px) var(--radius-s, 4px) 0;
+  --tk-status-fill: var(--tk-chip-fill);
+  display: flex;
+  align-items: flex-start;
+  border-radius: var(--radius-s, 4px);
   font-size: var(--font-ui-small, 13px);
   line-height: 1.35;
+}
+
+.tk-row-responded {
+  --tk-status-fill: var(--tk-chip-response-fill);
+}
+
+.tk-row-accepted {
+  --tk-status-fill: var(--tk-chip-accepted-fill);
+}
+
+.tk-row-rejected {
+  --tk-status-fill: var(--tk-chip-rejected-fill);
+}
+
+.tk-row-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: var(--size-2-3, 6px);
+  padding: var(--size-2-3, 6px);
+  border-radius: var(--radius-s, 4px);
   overflow-wrap: anywhere;
   cursor: pointer;
+}
+
+.tk-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The ring is amber throughout an open TK's life, so a pale fill still reads. */
+.tk-row-dot {
+  flex: none;
+  width: 0.7em;
+  height: 0.7em;
+  margin-top: 0.32em;
+  border-radius: 50%;
+  background-color: var(--tk-status-fill);
+  box-shadow: 0 0 0 1px var(--tk-chip-fill);
+}
+
+.tk-row-accepted .tk-row-dot {
+  box-shadow: 0 0 0 1px var(--tk-chip-accepted-fill);
+}
+
+.tk-row-rejected .tk-row-dot {
+  box-shadow: 0 0 0 1px var(--tk-chip-rejected-fill);
+}
+
+.tk-row-actions {
+  display: flex;
+  flex: none;
+  gap: var(--size-2-1, 2px);
+  padding: var(--size-2-1, 2px);
+}
+
+.tk-panel .tk-row-action {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tk-panel .tk-row-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tk-panel .tk-action-accepted:hover {
+  color: var(--tk-chip-accepted-fill);
+}
+
+.tk-panel .tk-action-rejected:hover {
+  color: var(--tk-chip-rejected-fill);
 }
 
 .tk-row-comment,
@@ -269,7 +387,7 @@ body {
   background-color: var(--background-modifier-hover);
 }
 
-.tk-row:focus-visible {
+.tk-row-main:focus-visible {
   outline: 2px solid var(--background-modifier-border-focus);
   outline-offset: -2px;
 }
@@ -277,6 +395,11 @@ body {
 .tk-row-comment.is-empty {
   color: var(--text-faint);
   font-style: italic;
+}
+
+.tk-empty-title {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
 }
 
 .tk-empty {
@@ -293,12 +416,27 @@ body {
 
 /* Comfortable tap targets, per Apple's 44pt guidance. */
 .is-mobile .tk-row {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  font-size: var(--font-ui-medium, 15px);
+}
+
+.is-mobile .tk-row-main {
   min-height: 44px;
   padding: var(--size-2-3, 6px) var(--size-4-2, 8px);
-  font-size: var(--font-ui-medium, 15px);
+}
+
+.is-mobile .tk-row-actions {
+  gap: 0;
+  padding: 0;
+}
+
+.is-mobile .tk-panel .tk-row-action {
+  width: 44px;
+  height: 44px;
+}
+
+.is-mobile .tk-panel .tk-filter {
+  min-height: 44px;
+  font-size: var(--font-ui-small, 13px);
 }
 
 .is-mobile .tk-row-comment,

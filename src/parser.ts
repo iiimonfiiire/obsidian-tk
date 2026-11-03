@@ -1,4 +1,9 @@
+export type TKStatus = "open" | "responded" | "accepted" | "rejected";
+
 export interface TK {
+  status: TKStatus;
+  /** Length of `[TK`, `[TK:`, `[TK accepted:` or `[TK rejected:`. */
+  prefixLength: number;
   start: number;
   end: number;
   line: number;
@@ -21,7 +26,18 @@ interface Candidate {
   escaped: boolean;
 }
 
-export type TKOpening = "bare" | "body";
+export type TKOpening = "bare" | "body" | "accepted" | "rejected";
+
+const OPENING_LENGTH: Record<TKOpening, number> = {
+  bare: 3,
+  body: 4,
+  accepted: 13,
+  rejected: 13,
+};
+
+export function openingLength(opening: TKOpening): number {
+  return OPENING_LENGTH[opening];
+}
 
 const FENCE_OPEN =
   /^([ \t]*(?:>[ \t]*)*)(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)*(`{3,}|~{3,})(.*)$/;
@@ -34,6 +50,8 @@ export function tkOpeningAt(text: string, index: number): TKOpening | null {
   const next = text[index + 3];
   if (next === "]") return "bare";
   if (next === ":") return "body";
+  if (text.startsWith(" accepted:", index + 3)) return "accepted";
+  if (text.startsWith(" rejected:", index + 3)) return "rejected";
   return null;
 }
 
@@ -94,8 +112,8 @@ function wikilinkEnd(line: string, index: number): number {
 function tkEnd(line: string, index: number, unmatched: Set<number>): number {
   const opening = tkOpeningAt(line, index);
   if (opening === "bare") return index + 4;
-  if (opening === "body") {
-    const close = closingBracket(line, index + 4, unmatched);
+  if (opening) {
+    const close = closingBracket(line, index + openingLength(opening), unmatched);
     return close === -1 ? -1 : close + 1;
   }
   return -1;
@@ -247,10 +265,10 @@ export const RESPONSE_SEPARATOR = " >> ";
  * Finds the first separator outside nested brackets. Escapes and code spans
  * follow the same rules as bracket balancing.
  */
-function topLevelSeparator(raw: string): number {
+function topLevelSeparator(raw: string, from: number): number {
   const unmatched = new Set<number>();
   let depth = 0;
-  let i = 4;
+  let i = from;
   const end = raw.length - 1;
   while (i < end) {
     const c = raw[i];
@@ -273,15 +291,16 @@ function topLevelSeparator(raw: string): number {
 function parseBody(
   raw: string,
   start: number,
+  prefix: number,
 ): Pick<TK, "body" | "separator" | "response" | "responseStart" | "responseEnd"> {
   const none = { response: null, responseStart: null, responseEnd: null };
   if (raw === "[TK]") return { body: "", separator: null, ...none };
 
-  const at = topLevelSeparator(raw);
+  const at = topLevelSeparator(raw, prefix);
   if (at === -1) {
-    return { body: raw.slice(4, -1).trim(), separator: null, ...none };
+    return { body: raw.slice(prefix, -1).trim(), separator: null, ...none };
   }
-  const body = raw.slice(4, at).trim();
+  const body = raw.slice(prefix, at).trim();
   const afterStart = at + RESPONSE_SEPARATOR.length;
   const after = raw.slice(afterStart, -1);
   const response = after.trim();
@@ -304,12 +323,22 @@ export function findTKs(text: string): TK[] {
       if (escaped) continue;
       const raw = text.slice(start, end);
       const bare = raw === "[TK]";
+      const opening = tkOpeningAt(raw, 0) as TKOpening;
+      const prefixLength = openingLength(opening);
+      const parsed = parseBody(raw, start, prefixLength);
       tks.push({
         start,
         end,
         line: scanned.line,
         ch: start - scanned.lineStart,
-        ...parseBody(raw, start),
+        ...parsed,
+        status:
+          opening === "accepted" || opening === "rejected"
+            ? opening
+            : parsed.response === null
+              ? "open"
+              : "responded",
+        prefixLength,
         bare,
         raw,
         inFrontmatter: scanned.inFrontmatter,

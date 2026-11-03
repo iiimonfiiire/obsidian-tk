@@ -39,6 +39,7 @@ describe("mobile safety", () => {
       "reveal.ts",
       "panel-model.ts",
       "settings-model.ts",
+      "status.ts",
     ]) {
       const source = sources.find((file) => file.name === name);
       expect(source?.text).not.toMatch(/from\s+"obsidian"/);
