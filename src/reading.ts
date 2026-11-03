@@ -1,4 +1,4 @@
-import { tkOpeningAt, type TKOpening } from "./parser";
+import { RESPONSE_SEPARATOR, tkOpeningAt, type TKOpening } from "./parser";
 
 const BREAKING_TAGS = new Set([
   "ADDRESS",
@@ -46,6 +46,7 @@ const SKIPPED_SELECTOR =
 
 interface Walk {
   visibility?: boolean[];
+  splitResponses: boolean;
   seen: number;
 }
 
@@ -129,6 +130,44 @@ function wrap(start: Text, index: number, close: Close, opening: TKOpening): HTM
   return chip;
 }
 
+/**
+ * Links are opaque elements here, so their contents don't count. The
+ * closing bracket moves into the segment so it takes the pill's right end.
+ */
+function markResponse(chip: HTMLElement): void {
+  const doc = chip.ownerDocument;
+  let depth = 0;
+  for (const node of Array.from(chip.childNodes)) {
+    if (!isText(node)) continue;
+    for (let i = 0; i < node.data.length; i++) {
+      const c = node.data[i];
+      if (c === "[") depth++;
+      else if (c === "]") depth--;
+      else if (depth === 0 && node.data.startsWith(RESPONSE_SEPARATOR, i)) {
+        const marker = node.splitText(i + 1);
+        const rest = marker.splitText(2);
+        chip.replaceChild(piece(doc, "tk-separator", ">>"), marker);
+
+        const moved: ChildNode[] = [];
+        for (let n: ChildNode | null = rest; n; n = n.nextSibling) moved.push(n);
+        const closing = moved[moved.length - 1];
+        const hasResponse = moved.some(
+          (n) => n !== closing && (n.textContent ?? "").trim() !== "",
+        );
+        if (hasResponse) {
+          const segment = doc.createElement("span");
+          segment.className = "tk-response";
+          chip.insertBefore(segment, rest);
+          moved.forEach((n) => segment.appendChild(n));
+        }
+        if (rest.data === "" && rest.parentNode) rest.remove();
+        if (node.data === "") node.remove();
+        return;
+      }
+    }
+  }
+}
+
 function scanText(start: Text, walk: Walk): ChildNode | null {
   let node = start;
   let position = 0;
@@ -154,7 +193,9 @@ function scanText(start: Text, walk: Walk): ChildNode | null {
       continue;
     }
 
-    const after = wrap(node, index, close, opening).nextSibling;
+    const chip = wrap(node, index, close, opening);
+    if (walk.splitResponses) markResponse(chip);
+    const after = chip.nextSibling;
     if (!after || !isText(after)) return after;
     node = after;
     position = 0;
@@ -170,7 +211,11 @@ function emptyLinkOpening(link: Element): TKOpening | null {
   return link.textContent === "TK" ? "bare" : null;
 }
 
-function replaceEmptyLink(link: Element, opening: TKOpening): HTMLElement {
+function replaceEmptyLink(
+  link: Element,
+  opening: TKOpening,
+  splitResponses: boolean,
+): HTMLElement {
   const doc = link.ownerDocument;
   const chip = doc.createElement("span");
   chip.className = "tk-chip";
@@ -184,6 +229,7 @@ function replaceEmptyLink(link: Element, opening: TKOpening): HTMLElement {
   while (link.firstChild) chip.appendChild(link.firstChild);
   chip.appendChild(piece(doc, "tk-bracket", "]"));
   link.replaceWith(chip);
+  if (splitResponses) markResponse(chip);
   return chip;
 }
 
@@ -207,7 +253,7 @@ function walkChildren(container: Element, walk: Walk): void {
       if (opening) {
         const element: Element = node;
         node = isReal(walk)
-          ? replaceEmptyLink(element, opening).nextSibling
+          ? replaceEmptyLink(element, opening, walk.splitResponses).nextSibling
           : element.nextSibling;
         continue;
       }
@@ -217,6 +263,16 @@ function walkChildren(container: Element, walk: Walk): void {
   }
 }
 
-export function decorateTKs(root: Element, visibility?: boolean[]): void {
-  if (!isSkipped(root)) walkChildren(root, { visibility, seen: 0 });
+export interface DecorateOptions {
+  visibility?: boolean[];
+  /** Off when the source has `\\>`, which renders as a plain `>` here. */
+  splitResponses?: boolean;
+}
+
+export function decorateTKs(
+  root: Element,
+  { visibility, splitResponses = true }: DecorateOptions = {},
+): void {
+  if (isSkipped(root)) return;
+  walkChildren(root, { visibility, splitResponses, seen: 0 });
 }

@@ -4,6 +4,7 @@ import {
   TFile,
   TFolder,
   addIcon,
+  debounce,
   editorLivePreviewField,
   type Editor,
   type MarkdownFileInfo,
@@ -14,14 +15,16 @@ import { tkEditorExtension } from "./editor";
 import { buildInsertion } from "./insert";
 import { tkVisibility } from "./parser";
 import { decorateTKs } from "./reading";
+import { TKSettingTab, type TKSettingsHost } from "./settings";
 import {
-  DEFAULT_SETTINGS,
-  TKSettingTab,
+  appearanceCss,
+  normalizeSettings,
   type TKSettings,
-  type TKSettingsHost,
-} from "./settings";
+} from "./settings-model";
 import { TKIndex } from "./tk-index";
 import { TK_ICON, TK_VIEW_TYPE, TKView } from "./view";
+
+const APPEARANCE_STYLE_ID = "tk-comments-appearance";
 
 const ICON_SVG =
   '<path fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" d="M32 14H18v72h14M68 14h14v72H68M36 50h28"/>';
@@ -31,12 +34,15 @@ function isMarkdown(file: TAbstractFile): file is TFile {
 }
 
 export default class TKCommentsPlugin extends Plugin implements TKSettingsHost {
-  override settings: TKSettings = { ...DEFAULT_SETTINGS };
+  override settings: TKSettings = normalizeSettings(null);
   private index!: TKIndex;
   private indexRequested = false;
+  private windows = new Set<Document>();
+  private saveSoon = debounce(() => void this.saveData(this.settings), 500, true);
 
   override async onload(): Promise<void> {
     await this.loadSettings();
+    this.registerAppearance();
 
     this.index = new TKIndex(
       {
@@ -96,14 +102,16 @@ export default class TKCommentsPlugin extends Plugin implements TKSettingsHost {
       if (!element.textContent?.includes("TK")) return;
       const section = context.getSectionInfo(element);
       let visibility: boolean[] | undefined;
+      let splitResponses = true;
       if (section) {
         const source = section.text
           .split("\n")
           .slice(section.lineStart, section.lineEnd + 1)
           .join("\n");
         if (source.includes("\\[TK")) visibility = tkVisibility(source);
+        if (source.includes("\\>")) splitResponses = false;
       }
-      decorateTKs(element, visibility);
+      decorateTKs(element, { visibility, splitResponses });
     });
 
     this.app.workspace.onLayoutReady(() => this.registerLiveUpdates());
@@ -114,8 +122,51 @@ export default class TKCommentsPlugin extends Plugin implements TKSettingsHost {
     this.index.setExcluded(this.settings.excludedFolders);
   }
 
+  applyAppearance(): void {
+    this.windows.forEach((doc) => this.writeAppearance(doc));
+    this.saveSoon();
+  }
+
   private async loadSettings(): Promise<void> {
-    this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData()) };
+    this.settings = normalizeSettings(await this.loadData());
+  }
+
+  private writeAppearance(doc: Document): void {
+    let style = doc.getElementById(APPEARANCE_STYLE_ID);
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = APPEARANCE_STYLE_ID;
+      doc.head.appendChild(style);
+    }
+    style.textContent = appearanceCss(this.settings.appearance);
+  }
+
+  /** Each popout window has its own document, so each needs its own style element. */
+  private registerAppearance(): void {
+    const { workspace } = this.app;
+    const addWindow = (doc: Document) => {
+      this.windows.add(doc);
+      this.writeAppearance(doc);
+    };
+    addWindow(document);
+    workspace.onLayoutReady(() => {
+      workspace.iterateAllLeaves((leaf) => addWindow(leaf.getContainer().doc));
+    });
+    this.registerEvent(
+      workspace.on("window-open", (_, win) => addWindow(win.document)),
+    );
+    this.registerEvent(
+      workspace.on("window-close", (_, win) => {
+        this.windows.delete(win.document);
+      }),
+    );
+    this.register(() => {
+      this.saveSoon.run();
+      this.windows.forEach((doc) => {
+        doc.getElementById(APPEARANCE_STYLE_ID)?.remove();
+      });
+      this.windows.clear();
+    });
   }
 
   private requestIndex(): void {

@@ -2,7 +2,14 @@ export interface TK {
   start: number;
   end: number;
   line: number;
+  ch: number;
   body: string;
+  /** Absolute offset of the first top-level " >> ", or null. */
+  separator: number | null;
+  /** Text after the separator. Null when there is none or nothing follows it. */
+  response: string | null;
+  responseStart: number | null;
+  responseEnd: number | null;
   bare: boolean;
   raw: string;
   inFrontmatter: boolean;
@@ -165,6 +172,7 @@ function quoteDepth(line: string): number {
 interface ScannedLine {
   candidates: Candidate[];
   line: number;
+  lineStart: number;
   inFrontmatter: boolean;
 }
 
@@ -218,7 +226,12 @@ function scan(text: string, parseFrontmatter: boolean): ScannedLine[] {
       const candidates: Candidate[] = [];
       scanLine(line, pos, candidates);
       if (candidates.length > 0) {
-        results.push({ candidates, line: lineNumber, inFrontmatter });
+        results.push({
+          candidates,
+          line: lineNumber,
+          lineStart: pos,
+          inFrontmatter,
+        });
       }
     }
 
@@ -226,6 +239,62 @@ function scan(text: string, parseFrontmatter: boolean): ScannedLine[] {
     lineNumber++;
   }
   return results;
+}
+
+export const RESPONSE_SEPARATOR = " >> ";
+
+/**
+ * Finds the first separator outside nested brackets. Escapes and code spans
+ * follow the same rules as bracket balancing.
+ */
+function topLevelSeparator(raw: string): number {
+  const unmatched = new Set<number>();
+  let depth = 0;
+  let i = 4;
+  const end = raw.length - 1;
+  while (i < end) {
+    const c = raw[i];
+    if (c === "\\") {
+      i += 2;
+    } else if (c === "`") {
+      const run = backtickRunLength(raw, i);
+      const close = closingBacktickRun(raw, i + run, run, unmatched);
+      i = close === -1 ? i + run : close + run;
+    } else {
+      if (depth === 0 && raw.startsWith(RESPONSE_SEPARATOR, i)) return i;
+      if (c === "[") depth++;
+      if (c === "]") depth--;
+      i++;
+    }
+  }
+  return -1;
+}
+
+function parseBody(
+  raw: string,
+  start: number,
+): Pick<TK, "body" | "separator" | "response" | "responseStart" | "responseEnd"> {
+  const none = { response: null, responseStart: null, responseEnd: null };
+  if (raw === "[TK]") return { body: "", separator: null, ...none };
+
+  const at = topLevelSeparator(raw);
+  if (at === -1) {
+    return { body: raw.slice(4, -1).trim(), separator: null, ...none };
+  }
+  const body = raw.slice(4, at).trim();
+  const afterStart = at + RESPONSE_SEPARATOR.length;
+  const after = raw.slice(afterStart, -1);
+  const response = after.trim();
+  if (response === "") return { body, separator: start + at, ...none };
+  const leading = after.length - after.replace(/^\s+/, "").length;
+  const responseStart = start + afterStart + leading;
+  return {
+    body,
+    separator: start + at,
+    response,
+    responseStart,
+    responseEnd: responseStart + response.length,
+  };
 }
 
 export function findTKs(text: string): TK[] {
@@ -239,7 +308,8 @@ export function findTKs(text: string): TK[] {
         start,
         end,
         line: scanned.line,
-        body: bare ? "" : raw.slice(4, -1).trim(),
+        ch: start - scanned.lineStart,
+        ...parseBody(raw, start),
         bare,
         raw,
         inFrontmatter: scanned.inFrontmatter,

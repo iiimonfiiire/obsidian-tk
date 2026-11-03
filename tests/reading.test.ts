@@ -6,12 +6,78 @@ import { decorateTKs } from "../src/reading";
 function render(html: string, visibility?: boolean[]): HTMLElement {
   const root = document.createElement("div");
   root.innerHTML = html;
-  decorateTKs(root, visibility);
+  decorateTKs(root, { visibility });
   return root;
 }
 
 const chips = (root: Element) =>
   Array.from(root.querySelectorAll(".tk-chip")).map((chip) => chip.textContent);
+
+const responses = (root: Element) =>
+  Array.from(root.querySelectorAll(".tk-chip .tk-response")).map(
+    (el) => el.textContent,
+  );
+
+describe("responses", () => {
+  it("wraps the text after the first separator into a segment", () => {
+    const root = render("<p>x [TK: question? >> answer.] y</p>");
+    expect(chips(root)).toEqual(["[TK: question? >> answer.]"]);
+    expect(responses(root)).toEqual([" answer.]"]);
+    expect(root.querySelector(".tk-separator")?.textContent).toBe(">>");
+    expect(root.textContent).toBe("x [TK: question? >> answer.] y");
+  });
+
+  it("gives the segment the closing bracket and the pill's right end", () => {
+    const chip = render("<p>[TK: q >> a]</p>").querySelector(".tk-chip")!;
+    expect(chip.lastElementChild?.className).toBe("tk-response");
+    expect(chip.lastElementChild?.lastElementChild?.className).toBe("tk-bracket");
+  });
+
+  it("keeps a link in the comment, the response, or both", () => {
+    const both = render('<p>[TK: <a href="a">a</a> q >> <a href="b">b</a>]</p>');
+    expect(responses(both)).toEqual([" b]"]);
+    expect(both.querySelector(".tk-chip > a")?.textContent).toBe("a");
+    expect(both.querySelector(".tk-response a")?.textContent).toBe("b");
+  });
+
+  it("splits on the first separator only, and not in nested brackets", () => {
+    expect(responses(render("<p>[TK: a >> b >> c]</p>"))).toEqual([" b >> c]"]);
+    expect(responses(render("<p>[TK: a [x >> y] b >> c]</p>"))).toEqual([" c]"]);
+  });
+
+  it("does not split on a pipe or a separator without spaces", () => {
+    for (const html of ["<p>[TK: a | b]</p>", "<p>[TK: a>>b]</p>"]) {
+      expect(responses(render(html))).toEqual([]);
+    }
+  });
+
+  it("marks the separator but adds no segment when nothing follows", () => {
+    const root = render("<p>[TK: question >> ]</p>");
+    expect(root.querySelector(".tk-separator")).not.toBeNull();
+    expect(responses(root)).toEqual([]);
+    expect(chips(root)).toEqual(["[TK: question >> ]"]);
+  });
+
+  it("splits a link with no destination", () => {
+    const root = render('<p><a href="">TK: q >> a</a></p>');
+    expect(chips(root)).toEqual(["[TK: q >> a]"]);
+    expect(responses(root)).toEqual([" a]"]);
+  });
+
+  it("can be turned off when the source escapes the separator", () => {
+    const root = document.createElement("div");
+    root.innerHTML = "<p>[TK: a >> b]</p>";
+    decorateTKs(root, { splitResponses: false });
+    expect(responses(root)).toEqual([]);
+  });
+
+  it("is idempotent", () => {
+    const root = render('<p>[TK: a >> <a href="b">b</a>]</p>');
+    const once = root.innerHTML;
+    decorateTKs(root);
+    expect(root.innerHTML).toBe(once);
+  });
+});
 
 describe("decorateTKs", () => {
   it("wraps a bare TK and keeps surrounding text", () => {

@@ -1,59 +1,103 @@
 /*
- * Themes can override these variables on body.
- * Obsidian's --color-orange tracks the active light or dark palette.
+ * Themes can override these variables on body. The shape comes from the active
+ * theme's tag variables, so chips match tags in any theme. The fill is deliberately
+ * not the tag color: a TK has to read as a gap.
  */
 body {
-  --tk-chip-rgb: var(--color-orange-rgb, 233, 151, 63);
-  --tk-chip-accent: var(--color-orange, #e9973f);
-  --tk-chip-background: rgba(var(--tk-chip-rgb), 0.16);
-  --tk-chip-bracket: var(--text-faint);
-  --tk-chip-radius: 4px;
-  --tk-chip-bleed: 0.22em;
-  --tk-source-background: rgba(var(--tk-chip-rgb), 0.1);
+  --tk-chip-fill: #f5b041;
+  --tk-chip-text: #2a1700;
+  --tk-chip-response-fill: #fcdca6;
+  --tk-chip-response-text: #2a1700;
+  --tk-chip-bracket: transparent;
+  --tk-chip-radius: var(--tag-radius, 2em);
+  --tk-chip-padding-y: calc(var(--tag-padding-y, 0.25em) * 0.6);
+  --tk-chip-bleed: 0.14em;
+  --tk-chip-margin: 0.14em;
+  --tk-chip-rgb: 245, 158, 11;
+  --tk-source-background: rgba(var(--tk-chip-rgb), 0.16);
 }
 
 .theme-dark {
-  --tk-chip-background: rgba(var(--tk-chip-rgb), 0.22);
+  --tk-chip-fill: #b45309;
+  --tk-chip-text: #ffffff;
+  --tk-chip-response-fill: #7c2d12;
+  --tk-chip-response-text: #ffffff;
+  --tk-source-background: rgba(var(--tk-chip-rgb), 0.2);
 }
 
 /*
- * Live Preview. The chip bleeds past its text with a box-shadow rather than
- * padding, so text doesn't shift when the cursor enters and the chip drops away.
- * Colors only for the same reason: no weight or size changes.
+ * The pill in Live Preview (.tk-cm) and reading view (.tk-chip).
+ *
+ * Nothing here may change text width, so the chip can drop away when the cursor
+ * enters without moving a glyph. The brackets stay in layout, transparent, and
+ * serve as the pill's side padding. A negative margin cancels the extra padding
+ * past them, and vertical padding never affects inline layout. By default there
+ * are no weight or size changes. Settings can opt into those, or into padding
+ * larger than the margin, which adds width instead of covering nearby words.
  */
-.tk-cm {
-  background-color: var(--tk-chip-background);
-}
-
-.tk-cm-open {
-  border-top-left-radius: var(--tk-chip-radius);
-  border-bottom-left-radius: var(--tk-chip-radius);
-  box-shadow: calc(var(--tk-chip-bleed) * -1) 0 0 0 var(--tk-chip-background);
-}
-
-.tk-cm-close {
-  border-top-right-radius: var(--tk-chip-radius);
-  border-bottom-right-radius: var(--tk-chip-radius);
-  box-shadow: var(--tk-chip-bleed) 0 0 0 var(--tk-chip-background);
+.tk-cm,
+.tk-chip {
+  --link-color: var(--tk-chip-text);
+  --link-color-hover: var(--tk-chip-text);
+  --link-external-color: var(--tk-chip-text);
+  --link-external-color-hover: var(--tk-chip-text);
+  --link-unresolved-color: var(--tk-chip-text);
+  --link-unresolved-opacity: 1;
+  --link-unresolved-decoration-color: var(--tk-chip-text);
+  --link-decoration: underline;
+  --link-decoration-hover: underline;
+  --link-external-decoration: underline;
+  --link-external-decoration-hover: underline;
+  background-color: var(--tk-chip-fill);
+  color: var(--tk-chip-text);
+  border-radius: var(--tk-chip-radius);
+  padding: var(--tk-chip-padding-y) var(--tk-chip-bleed);
+  margin-inline: calc(var(--tk-chip-margin) * -1);
+  font-family: var(--tk-chip-font-family, inherit);
+  font-size: var(--tk-chip-font-size, inherit);
+  font-weight: var(--tk-chip-font-weight, inherit);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 /*
- * Obsidian tokenizes [text] and [text]() as links and wraps each token around the
- * chip's pieces. Undo that link look. Real links in the body keep theirs.
+ * The response is a segment nested in the pill, ending at its right edge. Like the
+ * pill, it changes no widths: the transparent separator is the gap before it.
  */
-.cm-hmd-barelink > .tk-cm,
-.cm-link:not(.cm-hmd-internal-link):not(.cm-url) > .tk-cm {
-  color: var(--text-normal);
+.tk-response {
+  --link-color: var(--tk-chip-response-text);
+  --link-color-hover: var(--tk-chip-response-text);
+  --link-external-color: var(--tk-chip-response-text);
+  --link-external-color-hover: var(--tk-chip-response-text);
+  --link-unresolved-color: var(--tk-chip-response-text);
+  --link-unresolved-decoration-color: var(--tk-chip-response-text);
+  background-color: var(--tk-chip-response-fill);
+  color: var(--tk-chip-response-text);
+  border-radius: var(--tk-chip-radius);
+  padding: var(--tk-chip-padding-y) var(--tk-chip-bleed);
+  margin-inline-start: calc(var(--tk-chip-margin) * -1);
+  margin-inline-end: calc(var(--tk-chip-bleed) * -1);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Obsidian tokenizes [text] and [text]() as links inside the pill. */
+.markdown-source-view.mod-cm6 .tk-cm .cm-hmd-barelink,
+.markdown-source-view.mod-cm6 .tk-cm .cm-link,
+.markdown-source-view.mod-cm6 .tk-cm .cm-hmd-internal-link,
+.markdown-source-view.mod-cm6 .tk-cm .cm-underline {
+  color: inherit;
+}
+
+.markdown-source-view.mod-cm6 .tk-cm .cm-hmd-barelink {
+  text-decoration: none;
   cursor: text;
 }
 
-.cm-hmd-barelink > .tk-cm.tk-label,
-.cm-link:not(.cm-hmd-internal-link):not(.cm-url) > .tk-cm.tk-label {
-  color: var(--tk-chip-accent);
-}
-
-.cm-hmd-barelink > .tk-cm.tk-bracket,
-.cm-link:not(.cm-hmd-internal-link):not(.cm-url) > .tk-cm.tk-bracket {
+.markdown-source-view.mod-cm6 .tk-cm .tk-bracket,
+.markdown-source-view.mod-cm6 .tk-cm .tk-separator,
+.tk-chip .tk-bracket,
+.tk-chip .tk-separator {
   color: var(--tk-chip-bracket);
 }
 
@@ -61,49 +105,37 @@ body {
  * A click on [TK: x]() would otherwise follow the empty link and create a note
  * named "()". Let it fall through to the chip, where it places the cursor.
  */
-.cm-link:not(.cm-hmd-internal-link):not(.cm-url) > .tk-cm > .cm-underline {
-  color: inherit;
+.markdown-source-view.mod-cm6
+  .tk-cm
+  .cm-link:not(.cm-hmd-internal-link):not(.cm-url)
+  .cm-underline {
   text-decoration: none;
   pointer-events: none;
 }
 
-/* Source mode splits the highlight per token, so no radius: it would notch. */
+.tk-chip a,
+.tk-chip a:hover {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* Source mode stays quiet: raw text with a light tint. */
 .tk-source {
   background-color: var(--tk-source-background);
-}
-
-.cm-hmd-barelink > .tk-source {
-  color: var(--text-normal);
-}
-
-.cm-formatting.cm-hmd-barelink > .tk-source {
-  color: var(--tk-chip-bracket);
-}
-
-/* Reading view. */
-.tk-chip {
-  background-color: var(--tk-chip-background);
-  border-radius: var(--tk-chip-radius);
-  padding: 0.05em var(--tk-chip-bleed);
+  border-radius: 2px;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
 
-/* Dimmed by color, not opacity: opacity would also fade the chip behind them. */
-.tk-bracket,
-.tk-bracket * {
-  color: var(--tk-chip-bracket);
-}
-
-.tk-label,
-.tk-label * {
-  color: var(--tk-chip-accent);
+.markdown-source-view.mod-cm6 .tk-source .cm-hmd-barelink:not(.cm-formatting) {
+  color: var(--text-normal);
 }
 
 @media (forced-colors: active) {
   .tk-cm,
   .tk-chip {
-    text-decoration: underline dotted;
+    outline: 1px solid CanvasText;
+    forced-color-adjust: auto;
   }
 }
 
@@ -155,59 +187,78 @@ body {
   color: var(--text-normal);
 }
 
+.tk-panel .search-input-container {
+  margin: 0;
+  width: 100%;
+}
+
+.tk-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-2, 8px);
+  min-height: 24px;
+}
+
 .tk-count {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller, 12px);
 }
 
-.tk-count:empty {
+.tk-toggle-all.tk-hidden {
   display: none;
 }
 
-.tk-group + .tk-group {
-  border-top: 1px solid var(--background-modifier-border);
-}
-
 .tk-group-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--size-4-2, 8px);
-  padding: var(--size-4-2, 8px) var(--size-4-3, 12px) var(--size-2-1, 2px);
-  font-size: var(--font-ui-smaller, 12px);
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-muted);
+  width: auto;
+  margin-inline: var(--size-2-1, 2px);
 }
 
-.tk-group-name {
+.tk-group-heading .tree-item-inner {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: var(--font-semibold, 600);
 }
 
-.tk-group-count {
-  flex: none;
-  font-weight: var(--font-normal, 400);
-  font-variant-numeric: tabular-nums;
+.tk-group-heading:focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: -2px;
 }
 
 .tk-rows {
   padding: var(--size-2-1, 2px) var(--size-2-3, 6px) var(--size-4-2, 8px);
 }
 
+.tk-group .tree-item-children.tk-rows {
+  margin: 0;
+  border: none;
+}
+
 .tk-row {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
   padding: var(--size-2-3, 6px);
-  border-left: 2px solid rgba(var(--tk-chip-rgb), 0.55);
+  border-left: 2px solid rgba(var(--tk-chip-rgb), 0.7);
   border-radius: 0 var(--radius-s, 4px) var(--radius-s, 4px) 0;
   font-size: var(--font-ui-small, 13px);
   line-height: 1.35;
   overflow-wrap: anywhere;
   cursor: pointer;
+}
+
+.tk-row-comment,
+.tk-row-response {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.tk-row-response {
+  margin-top: var(--size-2-1, 2px);
+  padding-inline-start: var(--size-4-2, 8px);
+  border-inline-start: 2px solid var(--background-modifier-border-hover);
+  color: var(--text-muted);
 }
 
 .tk-row + .tk-row {
@@ -223,7 +274,7 @@ body {
   outline-offset: -2px;
 }
 
-.tk-row.is-empty {
+.tk-row-comment.is-empty {
   color: var(--text-faint);
   font-style: italic;
 }
@@ -233,18 +284,49 @@ body {
   color: var(--text-muted);
   font-size: var(--font-ui-small, 13px);
   text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.tk-setting-invalid {
+  border-color: var(--background-modifier-error);
 }
 
 /* Comfortable tap targets, per Apple's 44pt guidance. */
 .is-mobile .tk-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
   min-height: 44px;
   padding: var(--size-2-3, 6px) var(--size-4-2, 8px);
   font-size: var(--font-ui-medium, 15px);
+}
+
+.is-mobile .tk-row-comment,
+.is-mobile .tk-row-response {
   -webkit-line-clamp: unset;
 }
 
-.is-mobile .tk-panel .tk-scope-tab {
-  min-height: 36px;
+.is-mobile .tk-panel .tk-scope-tab,
+.is-mobile .tk-panel .search-input-container input {
+  min-height: 44px;
+}
+
+.is-mobile .tk-group-heading {
+  align-items: center;
+  min-height: 44px;
+}
+
+.is-mobile .tk-toggle-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.is-mobile .tk-panel .search-input-clear-button {
+  width: 44px;
+  height: 44px;
+  top: 0;
+  right: 0;
 }

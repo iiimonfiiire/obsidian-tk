@@ -277,6 +277,117 @@ describe("frontmatter", () => {
   });
 });
 
+describe("responses", () => {
+  const one = (text: string) => findTKs(text)[0];
+  const slice = (text: string) => {
+    const tk = one(text);
+    return text.slice(tk.responseStart ?? 0, tk.responseEnd ?? 0);
+  };
+
+  it("splits comment and response", () => {
+    const tk = one("[TK: Is there a style guide? >> Not yet.]");
+    expect(tk.body).toBe("Is there a style guide?");
+    expect(tk.response).toBe("Not yet.");
+  });
+
+  it("gives exact offsets for the separator and the trimmed response", () => {
+    const text = "lead [TK: q >>   the answer  ] tail";
+    const tk = one(text);
+    expect(text.slice(tk.separator ?? 0, (tk.separator ?? 0) + 4)).toBe(" >> ");
+    expect(slice(text)).toBe("the answer");
+  });
+
+  it("requires a space on both sides", () => {
+    for (const text of ["[TK: a>>b]", "[TK: a >>b]", "[TK: a>> b]", "[TK: q >>]"]) {
+      expect(one(text).separator).toBeNull();
+      expect(one(text).response).toBeNull();
+    }
+  });
+
+  it("no longer splits on a pipe", () => {
+    const tk = one("[TK: a | b]");
+    expect(tk.body).toBe("a | b");
+    expect(tk.response).toBeNull();
+  });
+
+  it("works in a table row, with no pipe to break the cell", () => {
+    const tk = one("| Cell [TK: q >> a] | Value |");
+    expect([tk.body, tk.response]).toEqual(["q", "a"]);
+  });
+
+  it("has no response fields without a separator", () => {
+    expect(one("[TK: plain]")).toMatchObject({
+      body: "plain",
+      separator: null,
+      response: null,
+      responseStart: null,
+      responseEnd: null,
+    });
+  });
+
+  it("keeps bare TKs working", () => {
+    expect(one("[TK]")).toMatchObject({
+      body: "",
+      bare: true,
+      separator: null,
+      response: null,
+    });
+  });
+
+  it("handles aliased wikilinks on both sides", () => {
+    const tk = one("[TK: [[A|a]] or [[B|b]]? >> [[C|c]] and [[D|d]]]");
+    expect(tk.body).toBe("[[A|a]] or [[B|b]]?");
+    expect(tk.response).toBe("[[C|c]] and [[D|d]]");
+  });
+
+  it("gives later separators to the response", () => {
+    const tk = one("[TK: a >> b >> c]");
+    expect(tk.body).toBe("a");
+    expect(tk.response).toBe("b >> c");
+  });
+
+  it("ignores a separator in nested brackets", () => {
+    expect(one("[TK: a [x >> y] b]").response).toBeNull();
+    expect(one("[TK: a [x >> y] b >> c]").response).toBe("c");
+  });
+
+  it("treats a separator with nothing after it as no response yet", () => {
+    for (const text of ["[TK: question >> ]", "[TK: question >>   ]"]) {
+      const tk = one(text);
+      expect(tk.body).toBe("question");
+      expect(tk.separator).not.toBeNull();
+      expect(tk.response).toBeNull();
+      expect(tk.responseStart).toBeNull();
+    }
+  });
+
+  it("allows an empty comment with a response", () => {
+    const tk = one("[TK: >> answer first]");
+    expect(tk.body).toBe("");
+    expect(tk.response).toBe("answer first");
+  });
+
+  it("ignores a separator in a code span", () => {
+    expect(one("[TK: use `a >> b` here]").response).toBeNull();
+    const tk = one("[TK: use `a >> b` here >> or `c >> d`]");
+    expect(tk.body).toBe("use `a >> b` here");
+    expect(tk.response).toBe("or `c >> d`");
+  });
+
+  it("works in frontmatter and with a link with no destination", () => {
+    const fm = one('---\nsummary: "[TK: q >> a]"\n---\n');
+    expect([fm.inFrontmatter, fm.response]).toEqual([true, "a"]);
+    expect(one("[TK: q >> a]()").response).toBe("a");
+  });
+
+  it("keeps raw and the full range unchanged", () => {
+    const text = "x [TK: q >> a] y";
+    const tk = one(text);
+    expect(tk.raw).toBe("[TK: q >> a]");
+    expect(text.slice(tk.start, tk.end)).toBe(tk.raw);
+  });
+});
+
 describe("tkVisibility", () => {
   it("flags escaped forms false and real forms true, in source order", () => {
     expect(tkVisibility("\\[TK: a] [TK: b] \\[TK] [TK]")).toEqual([
