@@ -30,7 +30,15 @@ describe("mobile safety", () => {
   });
 
   it("keeps the parser free of Obsidian imports", () => {
-    for (const name of ["parser.ts", "insert.ts", "reading.ts", "tk-index.ts", "editor.ts"]) {
+    for (const name of [
+      "parser.ts",
+      "insert.ts",
+      "reading.ts",
+      "tk-index.ts",
+      "editor.ts",
+      "reveal.ts",
+      "panel-model.ts",
+    ]) {
       const source = sources.find((file) => file.name === name);
       expect(source?.text).not.toMatch(/from\s+"obsidian"/);
     }

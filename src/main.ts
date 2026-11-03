@@ -96,14 +96,16 @@ export default class TKCommentsPlugin extends Plugin implements TKSettingsHost {
       if (!element.textContent?.includes("TK")) return;
       const section = context.getSectionInfo(element);
       let visibility: boolean[] | undefined;
+      let splitResponses = true;
       if (section) {
         const source = section.text
           .split("\n")
           .slice(section.lineStart, section.lineEnd + 1)
           .join("\n");
         if (source.includes("\\[TK")) visibility = tkVisibility(source);
+        if (source.includes("\\|")) splitResponses = false;
       }
-      decorateTKs(element, visibility);
+      decorateTKs(element, { visibility, splitResponses });
     });
 
     this.app.workspace.onLayoutReady(() => this.registerLiveUpdates());

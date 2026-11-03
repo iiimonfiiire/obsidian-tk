@@ -17,6 +17,10 @@ export interface MarkRange extends Span {
   className: string;
 }
 
+export const CHIP_CLASS = "tk-cm";
+export const SOURCE_CLASS = "tk-source";
+export const RESPONSE_CLASS = "tk-response";
+
 const HIDDEN = "hidden";
 const WIKILINK = /(!?)\[\[([^[\]|]+\|)?[^[\]]*\]\]/g;
 
@@ -45,12 +49,8 @@ export function touches(tk: TK, selection: readonly Span[]): boolean {
   );
 }
 
-/**
- * The chip is built from adjacent marks instead of one mark plus nested bracket
- * marks, so it stays continuous however it gets split around link syntax.
- * Obsidian does split it, once per syntax token.
- */
-export function chipRanges(
+/** One box per TK, wrapping everything else so it can be styled as a single pill. */
+export function outerRanges(
   tks: readonly TK[],
   selection: readonly Span[],
   livePreview: boolean,
@@ -60,33 +60,49 @@ export function chipRanges(
   for (const tk of tks) {
     if (tk.inFrontmatter) continue;
     if (tk.end < viewport.from || tk.start > viewport.to) continue;
-
     if (!livePreview) {
-      ranges.push({ from: tk.start, to: tk.end, className: "tk-source" });
-      continue;
+      ranges.push({ from: tk.start, to: tk.end, className: SOURCE_CLASS });
+    } else if (!touches(tk, selection)) {
+      ranges.push({ from: tk.start, to: tk.end, className: CHIP_CLASS });
+      // Runs to the closing bracket so the segment takes the pill's right end.
+      if (tk.response !== null && tk.pipe !== null) {
+        ranges.push({
+          from: tk.pipe + 1,
+          to: tk.end,
+          className: RESPONSE_CLASS,
+        });
+      }
     }
-    if (touches(tk, selection)) continue;
+  }
+  return ranges;
+}
 
-    const labelEnd = tk.start + (tk.bare ? 3 : 4);
-    const closing = tk.end - 1;
+/** Brackets, the label and hidden link syntax, inside the chip's box. */
+export function innerRanges(
+  tks: readonly TK[],
+  selection: readonly Span[],
+  livePreview: boolean,
+  viewport: Span,
+): MarkRange[] {
+  const ranges: MarkRange[] = [];
+  if (!livePreview) return ranges;
+  for (const tk of tks) {
+    if (tk.inFrontmatter || touches(tk, selection)) continue;
+    if (tk.end < viewport.from || tk.start > viewport.to) continue;
     ranges.push({
       from: tk.start,
       to: tk.start + 1,
-      className: "tk-cm tk-cm-open tk-bracket",
+      className: "tk-bracket",
     });
     ranges.push({
       from: tk.start + 1,
-      to: labelEnd,
-      className: "tk-cm tk-label",
+      to: tk.start + (tk.bare ? 3 : 4),
+      className: "tk-label",
     });
-    if (closing > labelEnd) {
-      ranges.push({ from: labelEnd, to: closing, className: "tk-cm" });
+    ranges.push({ from: tk.end - 1, to: tk.end, className: "tk-bracket" });
+    if (tk.pipe !== null) {
+      ranges.push({ from: tk.pipe, to: tk.pipe + 1, className: "tk-pipe" });
     }
-    ranges.push({
-      from: closing,
-      to: tk.end,
-      className: "tk-cm tk-cm-close tk-bracket",
-    });
     for (const span of hiddenLinkSyntax(tk)) {
       ranges.push({ ...span, className: HIDDEN });
     }
@@ -108,17 +124,25 @@ function markFor(className: string): Decoration {
   return mark;
 }
 
+function decorationSet(ranges: MarkRange[]): DecorationSet {
+  return Decoration.set(
+    ranges.map((range) => markFor(range.className).range(range.from, range.to)),
+    true,
+  );
+}
+
 export function tkEditorExtension(
   isLivePreview: (state: EditorState) => boolean,
 ): Extension {
   const plugin = ViewPlugin.fromClass(
     class {
       tks: TK[];
-      decorations: DecorationSet;
+      outer: DecorationSet = Decoration.none;
+      inner: DecorationSet = Decoration.none;
 
       constructor(view: EditorView) {
         this.tks = findTKs(view.state.doc.toString());
-        this.decorations = this.build(view);
+        this.build(view);
       }
 
       update(update: ViewUpdate) {
@@ -131,28 +155,36 @@ export function tkEditorExtension(
           update.viewportChanged ||
           isLivePreview(update.startState) !== isLivePreview(update.state)
         ) {
-          this.decorations = this.build(update.view);
+          this.build(update.view);
         }
       }
 
-      build(view: EditorView): DecorationSet {
-        const ranges = chipRanges(
-          this.tks,
-          view.state.selection.ranges,
-          isLivePreview(view.state),
-          view.viewport,
+      build(view: EditorView): void {
+        const { ranges } = view.state.selection;
+        const live = isLivePreview(view.state);
+        this.outer = decorationSet(
+          outerRanges(this.tks, ranges, live, view.viewport),
         );
-        return Decoration.set(
-          ranges.map((range) =>
-            markFor(range.className).range(range.from, range.to),
-          ),
-          true,
+        this.inner = decorationSet(
+          innerRanges(this.tks, ranges, live, view.viewport),
         );
       }
     },
-    { decorations: (value) => value.decorations },
+    {
+      provide: (self) => [
+        // Older Obsidian builds lack this facet; chips then split per syntax token.
+        (EditorView.outerDecorations ?? EditorView.decorations).of(
+          (view) => view.plugin(self)?.outer ?? Decoration.none,
+        ),
+        // Highest precedence renders innermost, so label and bracket colors win
+        // over the bare-link token spans Obsidian wraps around them.
+        Prec.highest(
+          EditorView.decorations.of(
+            (view) => view.plugin(self)?.inner ?? Decoration.none,
+          ),
+        ),
+      ],
+    },
   );
-  // Lower precedence renders further out, so the chip wraps other plugins' marks.
-  // Obsidian's own syntax marks still end up outside it; styles.css allows for both.
-  return Prec.lowest(plugin);
+  return plugin;
 }
