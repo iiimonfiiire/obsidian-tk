@@ -39,9 +39,13 @@ Limits of the parser:
 - Code spans are matched within one line.
 - Indented code blocks are not detected, since four spaces is also how list content nests.
 
-## Theming
+## Appearance
 
-Override these on `body`, and on `.theme-dark` for the dark palette:
+The settings tab sets chip colors for dark and light themes separately, plus padding and font, with a reset for each section. Changes apply live, including in popout windows.
+
+The defaults move no text when the cursor enters a TK. A different font, size, weight or a larger horizontal padding can, because the chip and the raw text then have different widths. Vertical padding never does.
+
+Themes can also override these on `body`, and on `.theme-dark` for the dark palette. Values set in the settings tab take priority.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
@@ -53,6 +57,10 @@ Override these on `body`, and on `.theme-dark` for the dark palette:
 | `--tk-chip-radius` | Corner radius | The theme's `--tag-radius` |
 | `--tk-chip-padding-y` | Vertical padding | 60% of the theme's `--tag-padding-y` |
 | `--tk-chip-bleed` | Extra side padding, past the brackets | `0.14em` |
+| `--tk-chip-margin` | Negative side margin that cancels that padding | `0.14em` |
+| `--tk-chip-font-family` | Chip font | Inherited |
+| `--tk-chip-font-size` | Chip font size | Inherited |
+| `--tk-chip-font-weight` | Chip font weight | Inherited |
 | `--tk-chip-rgb` | Panel row accent and source tint color, as `r, g, b` | Amber |
 | `--tk-source-background` | Source mode highlight | Tint of `--tk-chip-rgb` |
 
@@ -85,6 +93,7 @@ To install into a vault, copy `.env.example` to `.env`, set `OBSIDIAN_PLUGIN_DIR
 | `src/editor.ts` | CodeMirror 6 chips |
 | `src/reading.ts` | Reading view chips |
 | `src/view.ts` | Side panel |
+| `src/settings-model.ts` | Settings defaults, migration and generated CSS |
 | `src/settings.ts` | Settings tab |
 | `src/main.ts` | Plugin wiring |
 

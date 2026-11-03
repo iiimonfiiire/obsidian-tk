@@ -12,6 +12,7 @@ body {
   --tk-chip-radius: var(--tag-radius, 2em);
   --tk-chip-padding-y: calc(var(--tag-padding-y, 0.25em) * 0.6);
   --tk-chip-bleed: 0.14em;
+  --tk-chip-margin: 0.14em;
   --tk-chip-rgb: 245, 158, 11;
   --tk-source-background: rgba(var(--tk-chip-rgb), 0.16);
 }
@@ -30,8 +31,9 @@ body {
  * Nothing here may change text width, so the chip can drop away when the cursor
  * enters without moving a glyph. The brackets stay in layout, transparent, and
  * serve as the pill's side padding. A negative margin cancels the extra padding
- * past them, and vertical padding never affects inline layout. No weight or size
- * changes.
+ * past them, and vertical padding never affects inline layout. By default there
+ * are no weight or size changes. Settings can opt into those, or into padding
+ * larger than the margin, which adds width instead of covering nearby words.
  */
 .tk-cm,
 .tk-chip {
@@ -50,7 +52,10 @@ body {
   color: var(--tk-chip-text);
   border-radius: var(--tk-chip-radius);
   padding: var(--tk-chip-padding-y) var(--tk-chip-bleed);
-  margin-inline: calc(var(--tk-chip-bleed) * -1);
+  margin-inline: calc(var(--tk-chip-margin) * -1);
+  font-family: var(--tk-chip-font-family, inherit);
+  font-size: var(--tk-chip-font-size, inherit);
+  font-weight: var(--tk-chip-font-weight, inherit);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -70,7 +75,8 @@ body {
   color: var(--tk-chip-response-text);
   border-radius: var(--tk-chip-radius);
   padding: var(--tk-chip-padding-y) var(--tk-chip-bleed);
-  margin-inline: calc(var(--tk-chip-bleed) * -1);
+  margin-inline-start: calc(var(--tk-chip-margin) * -1);
+  margin-inline-end: calc(var(--tk-chip-bleed) * -1);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -279,6 +285,10 @@ body {
   font-size: var(--font-ui-small, 13px);
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+.tk-setting-invalid {
+  border-color: var(--background-modifier-error);
 }
 
 /* Comfortable tap targets, per Apple's 44pt guidance. */
