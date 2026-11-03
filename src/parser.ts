@@ -134,16 +134,20 @@ function scanLine(line: string, offset: number, out: Candidate[]): void {
   }
 }
 
+function isFrontmatterDelimiter(line: string): boolean {
+  return /^---[ \t\r]*$/.test(line);
+}
+
 function frontmatterEnd(text: string): number {
   const firstBreak = text.indexOf("\n");
-  if (firstBreak === -1 || text.slice(0, firstBreak).trimEnd() !== "---") {
+  if (firstBreak === -1 || !isFrontmatterDelimiter(text.slice(0, firstBreak))) {
     return 0;
   }
   let pos = firstBreak + 1;
   while (pos < text.length) {
     const lineEnd = text.indexOf("\n", pos);
     const next = lineEnd === -1 ? text.length : lineEnd;
-    if (text.slice(pos, next).trimEnd() === "---") return next;
+    if (isFrontmatterDelimiter(text.slice(pos, next))) return next;
     pos = next + 1;
   }
   return 0;
