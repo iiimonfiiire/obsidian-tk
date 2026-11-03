@@ -48,7 +48,7 @@ export class TKView extends ItemView {
   private query = "";
   private lastSignature = "";
 
-  private headerEl: HTMLElement | null = null;
+  private chromeEl: HTMLElement | null = null;
   private listEl: HTMLElement | null = null;
   private countEl: HTMLElement | null = null;
   private toggleAllEl: HTMLElement | null = null;
@@ -104,10 +104,10 @@ export class TKView extends ItemView {
    * arriving mid-search can't take focus or the cursor from the input.
    */
   private buildChrome(): void {
-    if (this.headerEl) return;
-    this.headerEl = this.contentEl.createDiv({ cls: "tk-panel-header" });
+    if (this.chromeEl) return;
+    this.chromeEl = this.contentEl.createDiv({ cls: "tk-panel-header" });
 
-    const tabs = this.headerEl.createDiv({
+    const tabs = this.chromeEl.createDiv({
       cls: "tk-scope",
       attr: { role: "group", "aria-label": "Scope" },
     });
@@ -121,14 +121,14 @@ export class TKView extends ItemView {
       this.tabs.set(id, tab);
     }
 
-    new SearchComponent(this.headerEl)
+    new SearchComponent(this.chromeEl)
       .setPlaceholder("Filter by TK text or note name")
       .onChange((value) => {
         this.query = value;
         this.refresh();
       });
 
-    const status = this.headerEl.createDiv({ cls: "tk-status" });
+    const status = this.chromeEl.createDiv({ cls: "tk-status" });
     this.countEl = status.createDiv({
       cls: "tk-count",
       attr: { "aria-live": "polite" },
