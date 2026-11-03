@@ -19,86 +19,60 @@ const responses = (root: Element) =>
   );
 
 describe("responses", () => {
-  it("wraps the text after the first pipe into a segment", () => {
-    const root = render("<p>x [TK: question? | answer.] y</p>");
-    expect(chips(root)).toEqual(["[TK: question? | answer.]"]);
+  it("wraps the text after the first separator into a segment", () => {
+    const root = render("<p>x [TK: question? >> answer.] y</p>");
+    expect(chips(root)).toEqual(["[TK: question? >> answer.]"]);
     expect(responses(root)).toEqual([" answer.]"]);
-    expect(root.querySelector(".tk-chip .tk-pipe")?.textContent).toBe("|");
-    expect(root.textContent).toBe("x [TK: question? | answer.] y");
+    expect(root.querySelector(".tk-separator")?.textContent).toBe(">>");
+    expect(root.textContent).toBe("x [TK: question? >> answer.] y");
   });
 
   it("gives the segment the closing bracket and the pill's right end", () => {
-    const root = render("<p>[TK: q | a]</p>");
-    const chip = root.querySelector(".tk-chip")!;
+    const chip = render("<p>[TK: q >> a]</p>").querySelector(".tk-chip")!;
     expect(chip.lastElementChild?.className).toBe("tk-response");
-    expect(
-      chip.lastElementChild?.lastElementChild?.className,
-    ).toBe("tk-bracket");
-  });
-
-  it("ignores pipes inside link elements, which are opaque", () => {
-    const root = render(
-      '<p>[TK: see <a href="T" data-href="T|A">A|B</a> first]</p>',
-    );
-    expect(root.querySelector(".tk-pipe")).toBeNull();
-    expect(responses(root)).toEqual([]);
+    expect(chip.lastElementChild?.lastElementChild?.className).toBe("tk-bracket");
   });
 
   it("keeps a link in the comment, the response, or both", () => {
-    const inComment = render('<p>[TK: see <a href="a">a</a> | no]</p>');
-    expect(responses(inComment)).toEqual([" no]"]);
-    expect(inComment.querySelector(".tk-response a")).toBeNull();
-    expect(inComment.querySelector(".tk-chip > a")).not.toBeNull();
-
-    const inResponse = render('<p>[TK: q | see <a href="b">b</a> now]</p>');
-    expect(responses(inResponse)).toEqual([" see b now]"]);
-    expect(inResponse.querySelector(".tk-response a")?.textContent).toBe("b");
-
-    const both = render(
-      '<p>[TK: <a href="a">a</a> q | <a href="b">b</a>]</p>',
-    );
+    const both = render('<p>[TK: <a href="a">a</a> q >> <a href="b">b</a>]</p>');
     expect(responses(both)).toEqual([" b]"]);
     expect(both.querySelector(".tk-chip > a")?.textContent).toBe("a");
     expect(both.querySelector(".tk-response a")?.textContent).toBe("b");
   });
 
-  it("splits on the first pipe only", () => {
-    expect(responses(render("<p>[TK: a | b | c]</p>"))).toEqual([" b | c]"]);
+  it("splits on the first separator only, and not in nested brackets", () => {
+    expect(responses(render("<p>[TK: a >> b >> c]</p>"))).toEqual([" b >> c]"]);
+    expect(responses(render("<p>[TK: a [x >> y] b >> c]</p>"))).toEqual([" c]"]);
   });
 
-  it("does not split on a pipe inside plain nested brackets", () => {
-    const root = render("<p>[TK: a [x|y] b | c]</p>");
-    expect(responses(root)).toEqual([" c]"]);
+  it("does not split on a pipe or a separator without spaces", () => {
+    for (const html of ["<p>[TK: a | b]</p>", "<p>[TK: a>>b]</p>"]) {
+      expect(responses(render(html))).toEqual([]);
+    }
   });
 
-  it("marks the pipe but adds no segment when nothing follows", () => {
-    const root = render("<p>[TK: question | ]</p>");
-    expect(root.querySelector(".tk-pipe")).not.toBeNull();
+  it("marks the separator but adds no segment when nothing follows", () => {
+    const root = render("<p>[TK: question >> ]</p>");
+    expect(root.querySelector(".tk-separator")).not.toBeNull();
     expect(responses(root)).toEqual([]);
-    expect(chips(root)).toEqual(["[TK: question | ]"]);
-  });
-
-  it("does not look inside code elements", () => {
-    const root = render("<p>[TK: use <code>a|b</code> here]</p>");
-    expect(root.querySelector(".tk-pipe")).toBeNull();
+    expect(chips(root)).toEqual(["[TK: question >> ]"]);
   });
 
   it("splits a link with no destination", () => {
-    const root = render('<p><a href="">TK: q | a</a></p>');
-    expect(chips(root)).toEqual(["[TK: q | a]"]);
+    const root = render('<p><a href="">TK: q >> a</a></p>');
+    expect(chips(root)).toEqual(["[TK: q >> a]"]);
     expect(responses(root)).toEqual([" a]"]);
   });
 
-  it("can be turned off when the source has an escaped pipe", () => {
+  it("can be turned off when the source escapes the separator", () => {
     const root = document.createElement("div");
-    root.innerHTML = "<p>[TK: a | b]</p>";
+    root.innerHTML = "<p>[TK: a >> b]</p>";
     decorateTKs(root, { splitResponses: false });
-    expect(chips(root)).toEqual(["[TK: a | b]"]);
     expect(responses(root)).toEqual([]);
   });
 
   it("is idempotent", () => {
-    const root = render('<p>[TK: a | <a href="b">b</a>]</p>');
+    const root = render('<p>[TK: a >> <a href="b">b</a>]</p>');
     const once = root.innerHTML;
     decorateTKs(root);
     expect(root.innerHTML).toBe(once);

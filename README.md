@@ -2,7 +2,7 @@
 
 An Obsidian plugin for "TK" placeholders, the writer's mark for a gap to fill later.
 
-Write `[TK]` or `[TK: what goes here]` anywhere in a note. Add a response after a pipe: `[TK: Is there a style guide? | Not yet.]`. The plugin shows each one as a chip and lists every open TK in a side panel. To resolve a TK, delete it. A TK with a response stays open until then.
+Write `[TK]` or `[TK: what goes here]` anywhere in a note. Add a response after ` >> `: `[TK: Is there a style guide? >> Not yet.]`. The plugin shows each one as a chip and lists every open TK in a side panel. To resolve a TK, delete it. A TK with a response stays open until then.
 
 Works on desktop and mobile.
 
@@ -24,17 +24,15 @@ Works on desktop and mobile.
 | `[TK]`, `[TK: body]`, `[TK:body]`, `[TK: ]` | Yes |
 | `[TK: see [[Some Note]] first]` | Yes, brackets are balanced |
 | `[TK: link text]()` | Yes, a link with no destination yet |
-| `[TK: comment \| response]` | Yes, with a response |
-| `[TK: a \| b \| c]` | Yes. The first pipe splits, so the response is `b \| c` |
-| `[TK: comment \| ]` | Yes, with no response yet |
-| `[TK: see [[Target\|Alias]] first]` | Yes, with no response. Pipes inside brackets, code spans and `\\\|` don't split |
+| `[TK: comment >> response]` | Yes, with a response. Spaces on both sides are required |
+| `[TK: a >> b >> c]` | Yes. The first separator splits, so the response is `b >> c` |
+| `[TK: comment >> ]` | Yes, with no response yet |
+| `[TK: a>>b]`, `[TK: a \| b]`, `[TK: [x >> y]]` | Yes, with no response |
 | In YAML frontmatter | Yes in the panel, not decorated |
 | `[TKO]`, `[TK-1]`, `[TKs: x]`, `[tk]` | No |
 | `\[TK]`, `` `[TK]` ``, fenced code | No |
 | `[[TK]]`, `[TK](https://example.com)` | No, these are links |
 | `[TK: opened` and closed on a later line | No, TKs are single-line |
-
-In a Markdown table, a literal pipe ends the cell. A TK with a response then renders as raw text across two cells, with no chip, and the row's last cell can drop out. The panel still lists it. Writing `\\|` keeps the cell intact and shows one chip, but the parser then sees no response.
 
 Limits of the parser:
 
@@ -51,7 +49,7 @@ Override these on `body`, and on `.theme-dark` for the dark palette:
 | `--tk-chip-text` | Pill text and links | Near-black, white in dark themes |
 | `--tk-chip-response-fill` | Response segment fill | Lighter amber, darker in dark themes |
 | `--tk-chip-response-text` | Response segment text and links | Near-black, white in dark themes |
-| `--tk-chip-bracket` | Bracket and pipe color | `transparent` |
+| `--tk-chip-bracket` | Bracket and separator color | `transparent` |
 | `--tk-chip-radius` | Corner radius | The theme's `--tag-radius` |
 | `--tk-chip-padding-y` | Vertical padding | 60% of the theme's `--tag-padding-y` |
 | `--tk-chip-bleed` | Extra side padding, past the brackets | `0.14em` |

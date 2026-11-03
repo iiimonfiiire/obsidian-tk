@@ -75,8 +75,8 @@ describe("filterFiles", () => {
 
 describe("searching responses", () => {
   const files = [
-    file("One.md", "[TK: question one | Answer with Marker] [TK: other]"),
-    file("Two.md", "[TK: q | see [[Target|the alias]] here]"),
+    file("One.md", "[TK: question one >> Answer with Marker] [TK: other]"),
+    file("Two.md", "[TK: q >> see [[Target|the alias]] here]"),
   ];
 
   it("matches response text case-insensitively, keeping that row only", () => {

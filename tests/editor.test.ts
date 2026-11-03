@@ -96,26 +96,26 @@ describe("ranges", () => {
     ]);
   });
 
-  it("adds a response segment from after the pipe to the pill's end", () => {
-    const text = "\n[TK: q | the answer]";
+  it("adds a response segment from after the separator to the pill's end", () => {
+    const text = "\n[TK: q >> the answer]";
     const outer = outerRanges(findTKs(text), away, true, FULL);
     expect(outer.map((r) => [r.className, text.slice(r.from, r.to)])).toEqual([
-      ["tk-cm", "[TK: q | the answer]"],
+      ["tk-cm", "[TK: q >> the answer]"],
       ["tk-response", " the answer]"],
     ]);
   });
 
-  it("marks the pipe, in the comment-only form too", () => {
-    for (const text of ["\n[TK: q | a]", "\n[TK: q | ]"]) {
-      const pipes = innerRanges(findTKs(text), away, true, FULL).filter(
-        (r) => r.className === "tk-pipe",
+  it("marks the separator, in the comment-only form too", () => {
+    for (const text of ["\n[TK: q >> a]", "\n[TK: q >> ]"]) {
+      const marks = innerRanges(findTKs(text), away, true, FULL).filter(
+        (r) => r.className === "tk-separator",
       );
-      expect(texts(text, pipes)).toEqual(["|"]);
+      expect(texts(text, marks)).toEqual([">>"]);
     }
   });
 
-  it("adds no segment without a response, or for an alias pipe", () => {
-    for (const text of ["\n[TK: q | ]", "\n[TK: [[A|a]] x]", "\n[TK: q]"]) {
+  it("adds no segment without a response, or for a pipe", () => {
+    for (const text of ["\n[TK: q >> ]", "\n[TK: a | b]", "\n[TK: q]"]) {
       const classes = outerRanges(findTKs(text), away, true, FULL).map(
         (r) => r.className,
       );
@@ -124,7 +124,7 @@ describe("ranges", () => {
   });
 
   it("drops the segment under the cursor and in source mode", () => {
-    const text = "[TK: q | a]";
+    const text = "[TK: q >> a]";
     const tks = findTKs(text);
     expect(outerRanges(tks, [{ from: 2, to: 2 }], true, FULL)).toEqual([]);
     expect(outerRanges(tks, away, false, FULL).map((r) => r.className)).toEqual([
@@ -265,7 +265,7 @@ describe("in a real EditorView", () => {
   });
 
   it("nests the response segment in one box around a link", () => {
-    const v = open("Lead\n\n[TK: q | see [[A Note]] now]");
+    const v = open("Lead\n\n[TK: q >> see [[A Note]] now]");
     expect(v.contentDOM.querySelectorAll(".tk-cm")).toHaveLength(1);
     const segments = v.contentDOM.querySelectorAll(".tk-cm .tk-response");
     expect(segments).toHaveLength(1);
@@ -274,7 +274,7 @@ describe("in a real EditorView", () => {
 
     v.dispatch({ selection: EditorSelection.cursor(v.state.doc.length - 2) });
     expect(v.contentDOM.querySelector(".tk-response")).toBeNull();
-    expect(v.state.doc.toString()).toContain("| see [[A Note]] now]");
+    expect(v.state.doc.toString()).toContain(">> see [[A Note]] now]");
   });
 
   it("does not chip an unclosed TK until it closes", () => {

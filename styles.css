@@ -57,7 +57,7 @@ body {
 
 /*
  * The response is a segment nested in the pill, ending at its right edge. Like the
- * pill, it changes no widths: the transparent pipe is the gap before it.
+ * pill, it changes no widths: the transparent separator is the gap before it.
  */
 .tk-response {
   --link-color: var(--tk-chip-response-text);
@@ -89,9 +89,9 @@ body {
 }
 
 .markdown-source-view.mod-cm6 .tk-cm .tk-bracket,
-.markdown-source-view.mod-cm6 .tk-cm .tk-pipe,
+.markdown-source-view.mod-cm6 .tk-cm .tk-separator,
 .tk-chip .tk-bracket,
-.tk-chip .tk-pipe {
+.tk-chip .tk-separator {
   color: var(--tk-chip-bracket);
 }
 

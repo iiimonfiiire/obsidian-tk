@@ -4,9 +4,9 @@ export interface TK {
   line: number;
   ch: number;
   body: string;
-  /** Absolute offset of the first top-level pipe, or null. */
-  pipe: number | null;
-  /** Text after the pipe. Null when there is no pipe or nothing follows it. */
+  /** Absolute offset of the first top-level " >> ", or null. */
+  separator: number | null;
+  /** Text after the separator. Null when there is none or nothing follows it. */
   response: string | null;
   responseStart: number | null;
   responseEnd: number | null;
@@ -241,11 +241,13 @@ function scan(text: string, parseFrontmatter: boolean): ScannedLine[] {
   return results;
 }
 
+export const RESPONSE_SEPARATOR = " >> ";
+
 /**
- * Finds the first pipe outside nested brackets, so `[[Target|Alias]]` doesn't
- * count. Escapes and code spans follow the same rules as bracket balancing.
+ * Finds the first separator outside nested brackets. Escapes and code spans
+ * follow the same rules as bracket balancing.
  */
-function topLevelPipe(raw: string): number {
+function topLevelSeparator(raw: string): number {
   const unmatched = new Set<number>();
   let depth = 0;
   let i = 4;
@@ -259,7 +261,7 @@ function topLevelPipe(raw: string): number {
       const close = closingBacktickRun(raw, i + run, run, unmatched);
       i = close === -1 ? i + run : close + run;
     } else {
-      if (c === "|" && depth === 0) return i;
+      if (depth === 0 && raw.startsWith(RESPONSE_SEPARATOR, i)) return i;
       if (c === "[") depth++;
       if (c === "]") depth--;
       i++;
@@ -271,23 +273,24 @@ function topLevelPipe(raw: string): number {
 function parseBody(
   raw: string,
   start: number,
-): Pick<TK, "body" | "pipe" | "response" | "responseStart" | "responseEnd"> {
+): Pick<TK, "body" | "separator" | "response" | "responseStart" | "responseEnd"> {
   const none = { response: null, responseStart: null, responseEnd: null };
-  if (raw === "[TK]") return { body: "", pipe: null, ...none };
+  if (raw === "[TK]") return { body: "", separator: null, ...none };
 
-  const pipe = topLevelPipe(raw);
-  if (pipe === -1) {
-    return { body: raw.slice(4, -1).trim(), pipe: null, ...none };
+  const at = topLevelSeparator(raw);
+  if (at === -1) {
+    return { body: raw.slice(4, -1).trim(), separator: null, ...none };
   }
-  const body = raw.slice(4, pipe).trim();
-  const after = raw.slice(pipe + 1, -1);
+  const body = raw.slice(4, at).trim();
+  const afterStart = at + RESPONSE_SEPARATOR.length;
+  const after = raw.slice(afterStart, -1);
   const response = after.trim();
-  if (response === "") return { body, pipe: start + pipe, ...none };
+  if (response === "") return { body, separator: start + at, ...none };
   const leading = after.length - after.replace(/^\s+/, "").length;
-  const responseStart = start + pipe + 1 + leading;
+  const responseStart = start + afterStart + leading;
   return {
     body,
-    pipe: start + pipe,
+    separator: start + at,
     response,
     responseStart,
     responseEnd: responseStart + response.length,

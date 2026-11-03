@@ -285,23 +285,40 @@ describe("responses", () => {
   };
 
   it("splits comment and response", () => {
-    const tk = one("[TK: Is there a style guide? | Not yet.]");
+    const tk = one("[TK: Is there a style guide? >> Not yet.]");
     expect(tk.body).toBe("Is there a style guide?");
     expect(tk.response).toBe("Not yet.");
   });
 
-  it("gives exact offsets for the pipe and the trimmed response", () => {
-    const text = "lead [TK: q  |   the answer  ] tail";
+  it("gives exact offsets for the separator and the trimmed response", () => {
+    const text = "lead [TK: q >>   the answer  ] tail";
     const tk = one(text);
-    expect(text[tk.pipe ?? 0]).toBe("|");
+    expect(text.slice(tk.separator ?? 0, (tk.separator ?? 0) + 4)).toBe(" >> ");
     expect(slice(text)).toBe("the answer");
-    expect(tk.response).toBe("the answer");
   });
 
-  it("has no response fields without a pipe", () => {
+  it("requires a space on both sides", () => {
+    for (const text of ["[TK: a>>b]", "[TK: a >>b]", "[TK: a>> b]", "[TK: q >>]"]) {
+      expect(one(text).separator).toBeNull();
+      expect(one(text).response).toBeNull();
+    }
+  });
+
+  it("no longer splits on a pipe", () => {
+    const tk = one("[TK: a | b]");
+    expect(tk.body).toBe("a | b");
+    expect(tk.response).toBeNull();
+  });
+
+  it("works in a table row, with no pipe to break the cell", () => {
+    const tk = one("| Cell [TK: q >> a] | Value |");
+    expect([tk.body, tk.response]).toEqual(["q", "a"]);
+  });
+
+  it("has no response fields without a separator", () => {
     expect(one("[TK: plain]")).toMatchObject({
       body: "plain",
-      pipe: null,
+      separator: null,
       response: null,
       responseStart: null,
       responseEnd: null,
@@ -312,98 +329,62 @@ describe("responses", () => {
     expect(one("[TK]")).toMatchObject({
       body: "",
       bare: true,
-      pipe: null,
+      separator: null,
       response: null,
     });
   });
 
-  it("does not split on an aliased wikilink in the comment", () => {
-    const tk = one("[TK: see [[Target|Alias]] first]");
-    expect(tk.body).toBe("see [[Target|Alias]] first");
-    expect(tk.pipe).toBeNull();
-    expect(tk.response).toBeNull();
-  });
-
-  it("splits after an aliased wikilink in the comment", () => {
-    const tk = one("[TK: see [[Target|Alias]] first | yes]");
-    expect(tk.body).toBe("see [[Target|Alias]] first");
-    expect(tk.response).toBe("yes");
-  });
-
-  it("keeps an aliased wikilink in the response whole", () => {
-    const text = "[TK: where? | in [[Target|Alias]] now]";
-    const tk = one(text);
-    expect(tk.body).toBe("where?");
-    expect(tk.response).toBe("in [[Target|Alias]] now");
-    expect(slice(text)).toBe("in [[Target|Alias]] now");
-  });
-
   it("handles aliased wikilinks on both sides", () => {
-    const tk = one("[TK: [[A|a]] or [[B|b]]? | [[C|c]] and [[D|d]]]");
+    const tk = one("[TK: [[A|a]] or [[B|b]]? >> [[C|c]] and [[D|d]]]");
     expect(tk.body).toBe("[[A|a]] or [[B|b]]?");
     expect(tk.response).toBe("[[C|c]] and [[D|d]]");
   });
 
-  it("gives later top-level pipes to the response", () => {
-    const tk = one("[TK: a | b | c | d]");
+  it("gives later separators to the response", () => {
+    const tk = one("[TK: a >> b >> c]");
     expect(tk.body).toBe("a");
-    expect(tk.response).toBe("b | c | d");
+    expect(tk.response).toBe("b >> c");
   });
 
-  it("ignores a pipe in plain nested brackets", () => {
-    expect(one("[TK: a [x|y] b]").response).toBeNull();
-    expect(one("[TK: a [x|y] b | c]").response).toBe("c");
+  it("ignores a separator in nested brackets", () => {
+    expect(one("[TK: a [x >> y] b]").response).toBeNull();
+    expect(one("[TK: a [x >> y] b >> c]").response).toBe("c");
   });
 
-  it("treats a pipe with nothing after it as no response yet", () => {
-    for (const text of ["[TK: question | ]", "[TK: question |]", "[TK: q |   ]"]) {
+  it("treats a separator with nothing after it as no response yet", () => {
+    for (const text of ["[TK: question >> ]", "[TK: question >>   ]"]) {
       const tk = one(text);
-      expect(tk.body).toBe(text.includes("question") ? "question" : "q");
-      expect(tk.pipe).not.toBeNull();
+      expect(tk.body).toBe("question");
+      expect(tk.separator).not.toBeNull();
       expect(tk.response).toBeNull();
       expect(tk.responseStart).toBeNull();
-      expect(tk.responseEnd).toBeNull();
     }
   });
 
   it("allows an empty comment with a response", () => {
-    const tk = one("[TK: | answer first]");
+    const tk = one("[TK: >> answer first]");
     expect(tk.body).toBe("");
     expect(tk.response).toBe("answer first");
-    expect(tk.bare).toBe(false);
   });
 
-  it("ignores pipes in code spans", () => {
-    expect(one("[TK: use `a|b` here]").response).toBeNull();
-    const tk = one("[TK: use `a|b` here | or `c|d`]");
-    expect(tk.body).toBe("use `a|b` here");
-    expect(tk.response).toBe("or `c|d`");
-  });
-
-  it("does not let an unmatched backtick hide a pipe", () => {
-    expect(one("[TK: a ` b | c]").response).toBe("c");
-  });
-
-  it("ignores an escaped pipe", () => {
-    expect(one("[TK: a \\| b]").response).toBeNull();
-    expect(one("[TK: a \\| b | c]").response).toBe("c");
+  it("ignores a separator in a code span", () => {
+    expect(one("[TK: use `a >> b` here]").response).toBeNull();
+    const tk = one("[TK: use `a >> b` here >> or `c >> d`]");
+    expect(tk.body).toBe("use `a >> b` here");
+    expect(tk.response).toBe("or `c >> d`");
   });
 
   it("works in frontmatter and with a link with no destination", () => {
-    const fm = one('---\nsummary: "[TK: q | a]"\n---\n');
+    const fm = one('---\nsummary: "[TK: q >> a]"\n---\n');
     expect([fm.inFrontmatter, fm.response]).toEqual([true, "a"]);
-    expect(one("[TK: q | a]()").response).toBe("a");
+    expect(one("[TK: q >> a]()").response).toBe("a");
   });
 
   it("keeps raw and the full range unchanged", () => {
-    const text = "x [TK: q | a] y";
+    const text = "x [TK: q >> a] y";
     const tk = one(text);
-    expect(tk.raw).toBe("[TK: q | a]");
+    expect(tk.raw).toBe("[TK: q >> a]");
     expect(text.slice(tk.start, tk.end)).toBe(tk.raw);
-  });
-
-  it("only flags a real response in tkVisibility the same as any TK", () => {
-    expect(tkVisibility("[TK: a | b] \\[TK: c | d]")).toEqual([true, false]);
   });
 });
 

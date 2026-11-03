@@ -65,9 +65,9 @@ export function outerRanges(
     } else if (!touches(tk, selection)) {
       ranges.push({ from: tk.start, to: tk.end, className: CHIP_CLASS });
       // Runs to the closing bracket so the segment takes the pill's right end.
-      if (tk.response !== null && tk.pipe !== null) {
+      if (tk.response !== null && tk.separator !== null) {
         ranges.push({
-          from: tk.pipe + 1,
+          from: tk.separator + 3,
           to: tk.end,
           className: RESPONSE_CLASS,
         });
@@ -100,8 +100,12 @@ export function innerRanges(
       className: "tk-label",
     });
     ranges.push({ from: tk.end - 1, to: tk.end, className: "tk-bracket" });
-    if (tk.pipe !== null) {
-      ranges.push({ from: tk.pipe, to: tk.pipe + 1, className: "tk-pipe" });
+    if (tk.separator !== null) {
+      ranges.push({
+        from: tk.separator + 1,
+        to: tk.separator + 3,
+        className: "tk-separator",
+      });
     }
     for (const span of hiddenLinkSyntax(tk)) {
       ranges.push({ ...span, className: HIDDEN });

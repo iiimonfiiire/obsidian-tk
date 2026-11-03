@@ -103,7 +103,7 @@ export default class TKCommentsPlugin extends Plugin implements TKSettingsHost {
           .slice(section.lineStart, section.lineEnd + 1)
           .join("\n");
         if (source.includes("\\[TK")) visibility = tkVisibility(source);
-        if (source.includes("\\|")) splitResponses = false;
+        if (source.includes("\\>")) splitResponses = false;
       }
       decorateTKs(element, { visibility, splitResponses });
     });

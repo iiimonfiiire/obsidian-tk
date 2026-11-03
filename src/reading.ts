@@ -1,4 +1,4 @@
-import { tkOpeningAt, type TKOpening } from "./parser";
+import { RESPONSE_SEPARATOR, tkOpeningAt, type TKOpening } from "./parser";
 
 const BREAKING_TAGS = new Set([
   "ADDRESS",
@@ -131,7 +131,7 @@ function wrap(start: Text, index: number, close: Close, opening: TKOpening): HTM
 }
 
 /**
- * Links are opaque elements here, so their pipes and brackets don't count. The
+ * Links are opaque elements here, so their contents don't count. The
  * closing bracket moves into the segment so it takes the pill's right end.
  */
 function markResponse(chip: HTMLElement): void {
@@ -143,10 +143,10 @@ function markResponse(chip: HTMLElement): void {
       const c = node.data[i];
       if (c === "[") depth++;
       else if (c === "]") depth--;
-      else if (c === "|" && depth === 0) {
-        const after = node.splitText(i);
-        const rest = after.splitText(1);
-        chip.replaceChild(piece(doc, "tk-pipe", "|"), after);
+      else if (depth === 0 && node.data.startsWith(RESPONSE_SEPARATOR, i)) {
+        const marker = node.splitText(i + 1);
+        const rest = marker.splitText(2);
+        chip.replaceChild(piece(doc, "tk-separator", ">>"), marker);
 
         const moved: ChildNode[] = [];
         for (let n: ChildNode | null = rest; n; n = n.nextSibling) moved.push(n);
@@ -265,7 +265,7 @@ function walkChildren(container: Element, walk: Walk): void {
 
 export interface DecorateOptions {
   visibility?: boolean[];
-  /** Off when the source has `\\|`, which renders as a plain pipe here. */
+  /** Off when the source has `\\>`, which renders as a plain `>` here. */
   splitResponses?: boolean;
 }
 
