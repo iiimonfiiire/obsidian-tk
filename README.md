@@ -6,7 +6,7 @@ Write `[TK]` or `[TK: what goes here]` anywhere in a note. Add a response after 
 
 Works on desktop and mobile.
 
-![TK Comments chips in the editor and the side panel](docs/demo.gif)
+![TK Comments chips in the editor and the side panel](docs/tk-comments-demo.gif)
 
 ## Features
 
