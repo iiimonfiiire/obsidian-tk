@@ -135,7 +135,7 @@ export default class TKCommentsPlugin extends Plugin implements TKSettingsHost {
   private writeAppearance(doc: Document): void {
     let style = doc.getElementById(APPEARANCE_STYLE_ID);
     if (!style) {
-      style = doc.createElement("style");
+      style = createEl("style");
       style.id = APPEARANCE_STYLE_ID;
       doc.head.appendChild(style);
     }
