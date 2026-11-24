@@ -99,8 +99,8 @@ function findClose(start: Text, from: number): Close | null {
   return null;
 }
 
-function piece(doc: Document, className: string, text: string): HTMLElement {
-  const span = doc.createElement("span");
+function piece(className: string, text: string): HTMLElement {
+  const span = createSpan();
   span.className = className;
   span.textContent = text;
   return span;
@@ -113,12 +113,11 @@ function chipClass(opening: TKOpening): string {
 }
 
 function wrap(start: Text, index: number, close: Close, opening: TKOpening): HTMLElement {
-  const doc = start.ownerDocument;
   const closing = close.node.splitText(close.offset);
   closing.splitText(1);
   const first = index > 0 ? start.splitText(index) : start;
 
-  const chip = doc.createElement("span");
+  const chip = createSpan();
   chip.className = chipClass(opening);
   first.parentNode?.insertBefore(chip, first);
   let node: ChildNode | null = first;
@@ -131,9 +130,9 @@ function wrap(start: Text, index: number, close: Close, opening: TKOpening): HTM
 
   const label = first.splitText(1);
   const rest = label.splitText(openingLength(opening) - 1);
-  chip.replaceChild(piece(doc, "tk-bracket", "["), first);
-  chip.replaceChild(piece(doc, "tk-label", label.data), label);
-  chip.replaceChild(piece(doc, "tk-bracket", "]"), closing);
+  chip.replaceChild(piece("tk-bracket", "["), first);
+  chip.replaceChild(piece("tk-label", label.data), label);
+  chip.replaceChild(piece("tk-bracket", "]"), closing);
   chip.childNodes.forEach((child) => {
     if (isText(child) && child.data === "") child.remove();
   });
@@ -146,7 +145,6 @@ function wrap(start: Text, index: number, close: Close, opening: TKOpening): HTM
  * closing bracket moves into the segment so it takes the pill's right end.
  */
 function markResponse(chip: HTMLElement): void {
-  const doc = chip.ownerDocument;
   let depth = 0;
   for (const node of Array.from(chip.childNodes)) {
     if (!isText(node)) continue;
@@ -157,7 +155,7 @@ function markResponse(chip: HTMLElement): void {
       else if (depth === 0 && node.data.startsWith(RESPONSE_SEPARATOR, i)) {
         const marker = node.splitText(i + 1);
         const rest = marker.splitText(2);
-        chip.replaceChild(piece(doc, "tk-separator", ">>"), marker);
+        chip.replaceChild(piece("tk-separator", ">>"), marker);
 
         const moved: ChildNode[] = [];
         for (let n: ChildNode | null = rest; n; n = n.nextSibling) moved.push(n);
@@ -166,7 +164,7 @@ function markResponse(chip: HTMLElement): void {
           (n) => n !== closing && (n.textContent ?? "").trim() !== "",
         );
         if (hasResponse) {
-          const segment = doc.createElement("span");
+          const segment = createSpan();
           segment.className = "tk-response";
           chip.insertBefore(segment, rest);
           moved.forEach((n) => segment.appendChild(n));
@@ -229,18 +227,17 @@ function replaceEmptyLink(
   opening: TKOpening,
   splitResponses: boolean,
 ): HTMLElement {
-  const doc = link.ownerDocument;
-  const chip = doc.createElement("span");
+  const chip = createSpan();
   chip.className = chipClass(opening);
   const first = link.firstChild as Text;
   const rest = first.splitText(openingLength(opening) - 1);
 
-  chip.appendChild(piece(doc, "tk-bracket", "["));
-  chip.appendChild(piece(doc, "tk-label", first.data));
+  chip.appendChild(piece("tk-bracket", "["));
+  chip.appendChild(piece("tk-label", first.data));
   first.remove();
   if (rest.data === "") rest.remove();
   while (link.firstChild) chip.appendChild(link.firstChild);
-  chip.appendChild(piece(doc, "tk-bracket", "]"));
+  chip.appendChild(piece("tk-bracket", "]"));
   link.replaceWith(chip);
   if (splitResponses) markResponse(chip);
   return chip;

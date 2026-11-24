@@ -49,7 +49,7 @@ export class TKIndex {
   private entries = new Map<string, { mtime: number; tks: TK[] }>();
   private generations = new Map<string, number>();
   private dirty = new Map<string, Reader>();
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private timer: number | null = null;
   private changed = false;
   private started = false;
   private syncing = false;
@@ -135,7 +135,7 @@ export class TKIndex {
   }
 
   destroy(): void {
-    if (this.timer !== null) clearTimeout(this.timer);
+    if (this.timer !== null) window.clearTimeout(this.timer);
     this.timer = null;
     this.dirty.clear();
     this.started = false;
@@ -148,8 +148,8 @@ export class TKIndex {
   }
 
   private arm(): void {
-    if (this.timer !== null) clearTimeout(this.timer);
-    this.timer = setTimeout(() => {
+    if (this.timer !== null) window.clearTimeout(this.timer);
+    this.timer = window.setTimeout(() => {
       this.timer = null;
       void this.flush();
     }, this.debounceMs);
