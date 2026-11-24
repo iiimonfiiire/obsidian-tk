@@ -6,6 +6,8 @@ Write `[TK]` or `[TK: what goes here]` anywhere in a note. Add a response after 
 
 Works on desktop and mobile.
 
+![TK Comments chips in the editor and the side panel](docs/demo.gif)
+
 ## Features
 
 - **Insert TK** command (`tk-comments:insert-tk`), with an icon for the mobile toolbar. Adds `[TK: ]` with the cursor inside. With text selected, that text becomes the body and the cursor lands after the `]`. There is no default hotkey; assign one in Settings > Hotkeys.
