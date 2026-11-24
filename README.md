@@ -77,6 +77,12 @@ Themes can also override these on `body`, and on `.theme-dark` for the dark pale
 
 The default fills give 5.0:1 contrast in dark themes and 9.1:1 in light themes.
 
+## Install
+
+From Community plugins, once TK Comments is listed: search for "TK Comments", install, enable.
+
+From a release: download `main.js`, `manifest.json` and `styles.css` from the release page, put them in `<vault>/.obsidian/plugins/tk-comments/`, then enable the plugin in Settings > Community plugins.
+
 ## Development
 
 Needs Node 24.
@@ -91,6 +97,15 @@ npm run dev
 `npm run build` typechecks and writes `main.js`.
 
 To install into a vault, copy `.env.example` to `.env`, set `OBSIDIAN_PLUGIN_DIR`, and run `npm run install-plugin`. It copies `main.js`, `manifest.json` and `styles.css` as real files, so a synced vault carries them to other devices.
+
+## Releasing
+
+1. Set the new version in `manifest.json` and add it to `versions.json` with its `minAppVersion`.
+2. Commit.
+3. Tag the commit with the bare version, for example `0.1.1`, with no leading `v`.
+4. Push the tag.
+
+The release workflow checks the tag against `manifest.json` and `versions.json`, runs the tests and build, and publishes `main.js`, `manifest.json` and `styles.css` as release assets.
 
 ## Layout
 
